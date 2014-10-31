@@ -31,4 +31,18 @@ describe Ziltoid::Watcher do
       expect(w.logger.level).to eq(Logger::WARN)
     end
   end
+
+  describe "#add" do
+    it "should have a watchlist" do
+      w = Ziltoid::Watcher.new
+      expect(w).to respond_to(:watchlist)
+    end
+
+    it "should add watchable item to the watchlist" do
+      w = Ziltoid::Watcher.new
+      dummy_process = Ziltoid::Process.new('dummy process')
+      w.add(dummy_process)
+      expect(w.watchlist['dummy process']).to eq(dummy_process)
+    end
+  end
 end
