@@ -14,5 +14,11 @@ module Ziltoid
     def add(watchable)
       self.watchlist[watchable.name] = watchable
     end
+
+    def watch!
+      watchlist.values.each do |watchable|
+        watchable.watch!
+      end
+    end
   end
 end

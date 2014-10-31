@@ -45,4 +45,16 @@ describe Ziltoid::Watcher do
       expect(w.watchlist['dummy process']).to eq(dummy_process)
     end
   end
+
+  describe "#watch!" do
+    it "should sed watch to every watchables" do
+      w = Ziltoid::Watcher.new
+      5.times do |i| 
+        p = Ziltoid::Process.new("dummy process #{i}")
+        expect(p).to receive(:watch!).once()
+        w.add(p)
+      end
+      w.watch!
+    end
+  end
 end
