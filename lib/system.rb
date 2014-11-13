@@ -47,6 +47,18 @@ module Ziltoid
       cpu_used
     end
 
+    def ram_usage(pid, include_children = true)
+      ps = ps_aux
+      return unless ps[pid]
+      mem_used = ps[pid][PS_FIELD_MAP[:ram]].to_i
+
+      get_children(pid).each do |child_pid|
+        mem_used += ps[child_pid][PS_FIELD_MAP[:ram]].to_i if ps[child_pid]
+      end if include_children
+
+      mem_used
+    end
+
     def get_children(parent_pid)
       child_pids = []
       ps_aux.each_pair do |_pid, info|

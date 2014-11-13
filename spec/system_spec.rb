@@ -61,6 +61,18 @@ describe Ziltoid::System do
     end
   end
 
+  describe "::ram_usage(pid, include_children = true)" do
+    it "should return the correct ram_usage including the children" do
+      expect(Ziltoid::System).to receive(:`).at_least(:once).and_return(ps_aux_res_with_children)
+      expect(Ziltoid::System.ram_usage(43060)).to eq(2852715)
+    end
+
+    it "should return the correct ram_usage excluding the children" do
+      expect(Ziltoid::System).to receive(:`).at_least(:once).and_return(ps_aux_res)
+      expect(Ziltoid::System.ram_usage(43060, false)).to eq(2657220)
+    end
+  end
+
   describe "::get_children(parent_pid)" do
     it "should return an empty array" do
       expect(Ziltoid::System).to receive(:`).at_least(:once).and_return(ps_aux_res)
