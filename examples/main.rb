@@ -1,6 +1,6 @@
-require "ziltoid"
+require_relative "../ziltoid"
 
-# Default logger is to $stdout, pass in a Logger instance (or Logger child class instance) to override it
+Default logger is to $stdout, pass in a Logger instance (or Logger child class instance) to override it
 watcher = Ziltoid.watcher.new(
   :logger => Logger.new(File.new('/tmp/ziltoid.log')),
   :progname => "Ziltoid Watcher",
