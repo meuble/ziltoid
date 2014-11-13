@@ -20,7 +20,11 @@ module Ziltoid
     end
 
     def above_cpu_limit?(include_children = true)
-      Ziltoid::System.cpu_usage(self.pid, include_children) > self.cpu_limit.to_i
+      Ziltoid::System.cpu_usage(self.pid, include_children) > self.cpu_limit.to_f
+    end
+
+    def above_ram_limit?(include_children = true)
+      Ziltoid::System.ram_usage(self.pid, include_children) > self.ram_limit.to_i
     end
 
   end
