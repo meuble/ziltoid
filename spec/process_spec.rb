@@ -55,4 +55,17 @@ describe Ziltoid::Process do
     end
   end
 
+  describe "#above_cpu_limit?(include_children = true)" do
+    it "should not exceed the cpu limit" do
+      proc = Ziltoid::Process.new("dummy process", :limit => {:cpu => 20}, :pid_file => sample_pid_file_path)
+      expect(Ziltoid::System).to receive(:cpu_usage).and_return(10)
+      expect(proc).not_to be_above_cpu_limit
+    end
+
+    it "should exceed the cpu limit" do
+      proc = Ziltoid::Process.new("dummy process", :limit => {:cpu => 5}, :pid_file => sample_pid_file_path)
+      expect(Ziltoid::System).to receive(:cpu_usage).and_return(10)
+      expect(proc).to be_above_cpu_limit
+    end
+  end
 end

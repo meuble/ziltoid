@@ -19,5 +19,9 @@ module Ziltoid
       File.read(self.pid_file).to_i
     end
 
+    def above_cpu_limit?(include_children = true)
+      Ziltoid::System.cpu_usage(self.pid, include_children) > self.cpu_limit.to_i
+    end
+
   end
 end
