@@ -47,4 +47,12 @@ describe Ziltoid::Process do
       end
     end
   end
+
+  describe "#pid" do
+    it "should read the pid file and return the corresponding pid" do
+      proc = Ziltoid::Process.new("dummy process", :pid_file => sample_pid_file_path)
+      expect(proc.pid).to eq(12345)
+    end
+  end
+
 end

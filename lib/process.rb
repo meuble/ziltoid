@@ -13,7 +13,11 @@ module Ziltoid
         self.stop_command = options[:commands][:stop] || nil
         self.restart_command = options[:commands][:restart] || nil
       end
-
     end
+
+    def pid
+      File.read(self.pid_file).to_i
+    end
+
   end
 end
