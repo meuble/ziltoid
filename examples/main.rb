@@ -31,7 +31,7 @@ watcher.add(Ziltoid::Process.new("Lighty", {
   :pid_file => "/tmp/pids/lighty.pid",
   :commands {
     :start => "/home/ror/gem/bin/lighty start",
-    :stop => "/home/ror/gem/bin/thin stop"
+    :stop => "/home/ror/gem/bin/lighty stop"
   },
   :max_ram => "256",
   :max_cpu => "5"

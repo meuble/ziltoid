@@ -1,12 +1,16 @@
 #encoding: utf-8
 
+require 'simplecov'
+
+# Code coverage
+SimpleCov.start do
+  add_filter "/vendor/"
+  add_filter "/spec/"
+end
+
 require File.join(File.dirname(__FILE__), '..', 'lib', 'watcher')
 require File.join(File.dirname(__FILE__), '..', 'lib', 'process')
 require File.join(File.dirname(__FILE__), '..', 'lib', 'system')
-
-def sample_pid_file_path
-  File.join(File.dirname(__FILE__), '..', 'spec', 'sample_pid_file.pid')
-end
 
 RSpec.configure do |config|
   config.mock_with :rspec
@@ -19,4 +23,8 @@ RSpec.configure do |config|
   config.expect_with :rspec do |c|
     c.syntax = :expect
   end
+end
+
+def sample_pid_file_path
+  File.join(File.dirname(__FILE__), '..', 'spec', 'sample_pid_file.pid')
 end
