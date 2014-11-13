@@ -49,6 +49,18 @@ describe Ziltoid::System do
     end
   end
 
+  describe "::cpu_usage(pid, include_children = true)" do
+    it "should return the correct cpu_usage including the children" do
+      expect(Ziltoid::System).to receive(:`).at_least(:once).and_return(ps_aux_res_with_children)
+      expect(Ziltoid::System.cpu_usage(43060)).to eq(4.0)
+    end
+
+    it "should return the correct cpu_usage excluding the children" do
+      expect(Ziltoid::System).to receive(:`).at_least(:once).and_return(ps_aux_res)
+      expect(Ziltoid::System.cpu_usage(43060, false)).to eq(0.8)
+    end
+  end
+
   describe "::get_children(parent_pid)" do
     it "should return an empty array" do
       expect(Ziltoid::System).to receive(:`).at_least(:once).and_return(ps_aux_res)

@@ -35,6 +35,18 @@ module Ziltoid
       end
     end
 
+    def cpu_usage(pid, include_children = true)
+      ps = ps_aux
+      return unless ps[pid]
+      cpu_used = ps[pid][PS_FIELD_MAP[:cpu]].to_f
+
+      get_children(pid).each do |child_pid|
+        cpu_used += ps[child_pid][PS_FIELD_MAP[:cpu]].to_f if ps[child_pid]
+      end if include_children
+
+      cpu_used
+    end
+
     def get_children(parent_pid)
       child_pids = []
       ps_aux.each_pair do |_pid, info|
