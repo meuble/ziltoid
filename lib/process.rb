@@ -16,7 +16,10 @@ module Ziltoid
     end
 
     def pid
-      File.read(self.pid_file).to_i
+      if File.exist?(self.pid_file)
+        str = File.read(pid_file)
+        str.to_i if str.size > 0
+      end
     end
 
     def above_cpu_limit?(include_children = true)

@@ -53,6 +53,11 @@ describe Ziltoid::Process do
       proc = Ziltoid::Process.new("dummy process", :pid_file => sample_pid_file_path)
       expect(proc.pid).to eq(12345)
     end
+
+    it "should return nil if the pid_file doesn't exist" do
+      proc = Ziltoid::Process.new("dummy process", :pid_file => "ouioui")
+      expect(proc.pid).to be_nil
+    end
   end
 
   describe "#above_cpu_limit?(include_children = true)" do
