@@ -3,12 +3,7 @@ module Ziltoid
   module System
 
     # The position of each field in ps output
-    PS_FIELD_MAP = {
-      :pid => 0,
-      :ppid => 1,
-      :cpu => 2,
-      :ram => 3
-    }
+    PS_FIELDS = [:pid, :ppid, :cpu, :ram]
 
     module_function
 
@@ -29,8 +24,14 @@ module Ziltoid
         info = process.split(/\s+/)
         info.delete_if { |p_info| p_info.strip.empty? }
         info.map! { |p_info| p_info.gsub(",", ".") }
-        pid = info[PS_FIELD_MAP[:pid]].strip.to_i
-        result[pid] = info.flatten
+
+        info = PS_FIELDS.each_with_index.inject({}) do |info_hash, (field, field_index)|
+          info_hash[field] = info[field_index]
+          info_hash
+        end
+
+        pid = info[:pid].strip.to_i
+        result[pid] = info
         result
       end
     end
@@ -38,10 +39,10 @@ module Ziltoid
     def cpu_usage(pid, include_children = true)
       ps = ps_aux
       return unless ps[pid]
-      cpu_used = ps[pid][PS_FIELD_MAP[:cpu]].to_f
+      cpu_used = ps[pid][:cpu].to_f
 
       get_children(pid).each do |child_pid|
-        cpu_used += ps[child_pid][PS_FIELD_MAP[:cpu]].to_f if ps[child_pid]
+        cpu_used += ps[child_pid][:cpu].to_f if ps[child_pid]
       end if include_children
 
       cpu_used
@@ -50,10 +51,10 @@ module Ziltoid
     def ram_usage(pid, include_children = true)
       ps = ps_aux
       return unless ps[pid]
-      mem_used = ps[pid][PS_FIELD_MAP[:ram]].to_i
+      mem_used = ps[pid][:ram].to_i
 
       get_children(pid).each do |child_pid|
-        mem_used += ps[child_pid][PS_FIELD_MAP[:ram]].to_i if ps[child_pid]
+        mem_used += ps[child_pid][:ram].to_i if ps[child_pid]
       end if include_children
 
       mem_used
@@ -62,7 +63,7 @@ module Ziltoid
     def get_children(parent_pid)
       child_pids = []
       ps_aux.each_pair do |_pid, info|
-        child_pids << info[PS_FIELD_MAP[:pid]].to_i if info[PS_FIELD_MAP[:ppid]].to_i == parent_pid.to_i
+        child_pids << info[:pid].to_i if info[:ppid].to_i == parent_pid.to_i
       end
       grand_children = child_pids.map { |pid| get_children(pid) }.flatten
       child_pids.concat grand_children

@@ -4,15 +4,15 @@ require File.join(File.dirname(__FILE__), 'spec_helpers')
 
 describe Ziltoid::System do
   let :ps_aux_res do
-    "43060   3,3  0,8  2657220  63920   ??  S     3nov14   8:58.29 /Applications/Utilities/Terminal.app/Contents/MacOS/Terminal -psn_0_45067\n43065   3,1  2,8  1503208 233320   ??  S     3nov14 318:58.34 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome -psn_0_53261"
+    "43060   3,3  0,8  2657220\n43065   3,1  2,8  1503208"
   end
 
   let :ps_aux_res_with_children do
-    "43060   3,3  0,8  2657220  63920   ??  S     3nov14   8:58.29 /Applications/Utilities/Terminal.app/Contents/MacOS/Terminal -psn_0_45067\n43065   3,1  2,8  1503208 233320   ??  S     3nov14 318:58.34 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome -psn_0_53261\n43066  43060  2,2  72039 233320   ??  S     3nov14 318:58.34 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome -psn_0_53261\n43067  43060  1,0  123456 233320   ??  S     3nov14 318:58.34 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome -psn_0_53261"
+    "43060   3,3  0,8  2657220\n43065   3,1  2,8  1503208\n43066  43060  2,2  72039\n43067  43060  1,0  123456"
   end
 
   let :ps_aux_res_with_grand_children do
-    "43060   3,3  0,8  2657220  63920   ??  S     3nov14   8:58.29 /Applications/Utilities/Terminal.app/Contents/MacOS/Terminal -psn_0_45067\n43065   3,1  2,8  1503208 233320   ??  S     3nov14 318:58.34 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome -psn_0_53261\n43066  43060  2,2  72039 233320   ??  S     3nov14 318:58.34 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome -psn_0_53261\n43067  43060  1,0  123456 233320   ??  S     3nov14 318:58.34 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome -psn_0_53261\n43068  43067  1,0  123456 233320   ??  S     3nov14 318:58.34 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome -psn_0_53261"
+    "43060   3,3  0,8  2657220\n43065   3,1  2,8  1503208\n43066  43060  2,2  72039\n43067  43060  1,0  123456\n43068  43067  1,0  123456"
   end
 
   describe "::pid_alive?" do
@@ -38,14 +38,23 @@ describe Ziltoid::System do
       expect(Ziltoid::System.ps_aux).to be_kind_of(Hash)
     end
 
-    it "should have the correct information" do
+    it "should have the correct information with no parent" do
       expect(Ziltoid::System).to receive(:`).at_least(:once).and_return(ps_aux_res)
       res = Ziltoid::System.ps_aux
-      first_res = res.first[1]
-      expect(first_res[0]).to eq("43060")
-      expect(first_res[1]).to eq("3.3")
-      expect(first_res[2]).to eq("0.8")
-      expect(first_res[3]).to eq("2657220")
+      first_res = res[43060]
+      expect(first_res[:pid]).to eq("43060")
+      expect(first_res[:cpu]).to eq("0.8")
+      expect(first_res[:ram]).to eq("2657220")
+    end
+
+    it "should have the correct information with a parent" do
+      expect(Ziltoid::System).to receive(:`).at_least(:once).and_return(ps_aux_res_with_children)
+      res = Ziltoid::System.ps_aux
+      first_res = res[43067]
+      expect(first_res[:pid]).to eq("43067")
+      expect(first_res[:ppid]).to eq("43060")
+      expect(first_res[:cpu]).to eq("1.0")
+      expect(first_res[:ram]).to eq("123456")
     end
   end
 
