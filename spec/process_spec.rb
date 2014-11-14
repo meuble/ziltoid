@@ -115,4 +115,44 @@ describe Ziltoid::Process do
     end
   end
 
+  context "when manipulating proccesses" do
+    before :each do
+      @process = Ziltoid::Process.new("dummy process", {
+        :pid_file => sample_pid_file_path,
+        :commands => {
+          :start => "/etc/init.d/script start",
+          :stop => "/etc/init.d/script stop",
+          :restart => "/etc/init.d/script restart"
+        }
+      })
+    end
+
+    describe "#start" do
+      it "should return nil if the process is already running" do
+        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true)
+        expect(@process.start).to be_nil
+      end
+
+      it "should launch the start command" do
+        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
+        expect(@process).to receive(:`).with(@process.start_command)
+        @process.start
+      end
+    end
+
+    describe "#stop" do
+      it "should remove the pid file if the process is not running and return nil" do
+        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
+        expect(@process).to receive(:remove_pid_file)
+        expect(@process.stop).to be_nil
+      end
+
+      it "should launch the start command" do
+        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true)
+        expect(@process).to receive(:`).with(@process.stop_command)
+        @process.stop
+      end
+    end
+
+  end
 end

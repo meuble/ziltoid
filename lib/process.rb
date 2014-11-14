@@ -36,5 +36,19 @@ module Ziltoid
       Ziltoid::System.ram_usage(self.pid, include_children) > self.ram_limit.to_i
     end
 
+    def start
+      return if Ziltoid::System.pid_alive?(self.pid)
+      %x(#{self.start_command})
+    end
+
+    def stop
+      if !Ziltoid::System.pid_alive?(self.pid)
+        self.remove_pid_file
+        return
+      else
+        %x(#{self.stop_command})
+      end
+    end
+
   end
 end
