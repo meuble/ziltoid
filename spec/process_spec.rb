@@ -58,6 +58,33 @@ describe Ziltoid::Process do
       proc = Ziltoid::Process.new("dummy process", :pid_file => "ouioui")
       expect(proc.pid).to be_nil
     end
+
+    it "should return nil if the process has no pid_file" do
+      proc = Ziltoid::Process.new("dummy process")
+      expect(proc.pid).to be_nil
+    end
+  end
+
+  describe "#remove_pid_file" do
+    it "should return nil if the process has no pid_file" do
+      proc = Ziltoid::Process.new("dummy process")
+      expect(proc.remove_pid_file).to be_nil
+    end
+
+    it "should return nil if the pid_file does not exist" do
+      proc = Ziltoid::Process.new("dummy process", :pid_file => "ouioui")
+      expect(proc.remove_pid_file).to be_nil
+    end
+
+    it "should correctly remove the pid file" do
+      file = open("sample_file.pid", 'w')
+      file.write("1234")
+      file.close
+      expect(File.exist?("sample_file.pid")).to be true
+      proc = Ziltoid::Process.new("dummy process", :pid_file => "sample_file.pid")
+      proc.remove_pid_file
+      expect(File.exist?("sample_file.pid")).to be false
+    end
   end
 
   describe "#above_cpu_limit?(include_children = true)" do

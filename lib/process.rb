@@ -16,9 +16,15 @@ module Ziltoid
     end
 
     def pid
-      if File.exist?(self.pid_file)
+      if self.pid_file && File.exist?(self.pid_file)
         str = File.read(pid_file)
         str.to_i if str.size > 0
+      end
+    end
+
+    def remove_pid_file
+      if self.pid_file && File.exist?(self.pid_file)
+        File.delete(self.pid_file)
       end
     end
 
