@@ -8,12 +8,15 @@ module Ziltoid
     module_function
 
     def pid_alive?(pid)
-      ::Process.kill(0, pid)
-      true
-    rescue Errno::EPERM # no permission, but it is definitely alive
-      true
-    rescue Errno::ESRCH
-      false
+      return false if pid.nil?
+      begin
+        ::Process.kill(0, pid)
+        true
+      rescue Errno::EPERM # no permission, but it is definitely alive
+        true
+      rescue Errno::ESRCH
+        false
+      end
     end
 
     def ps_aux

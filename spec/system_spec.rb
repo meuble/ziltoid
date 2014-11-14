@@ -30,6 +30,10 @@ describe Ziltoid::System do
       expect(Process).to receive(:kill).with(0, 555).and_raise(Errno::ESRCH)
       expect(Ziltoid::System).not_to be_pid_alive(555)
     end
+
+    it "should be false if the provided pid is nil" do
+      expect(Ziltoid::System).not_to be_pid_alive(nil)
+    end
   end
 
   describe "::ps_aux" do
