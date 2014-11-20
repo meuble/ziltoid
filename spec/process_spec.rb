@@ -183,6 +183,23 @@ describe Ziltoid::Process do
         expect(@process.stop).to be_nil
       end
 
+      it "should send kill and kill-9 commands if there is no stop command" do
+        proc = Ziltoid::Process.new("dummy process", {
+          :pid_file => sample_pid_file_path,
+          :commands => {
+            :start => "/etc/init.d/script start",
+            :restart => "/etc/init.d/script restart"
+          }
+        })
+
+        allow(proc).to receive(:remove_pid_file)
+        allow(proc).to receive(:`).with(anything())
+        expect(proc).to receive(:`).with("kill 12345")
+        expect(proc).to receive(:`).with("kill -9 12345")
+        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, true, true, true)
+        proc.stop
+      end
+
       it "should launch the stop command" do
         allow(@process).to receive(:remove_pid_file)
         expect(@process).to receive(:`).with(@process.stop_command)
