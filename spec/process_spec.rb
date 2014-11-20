@@ -169,8 +169,9 @@ describe Ziltoid::Process do
         expect(@process.start).to be_nil
       end
 
-      it "should launch the start command" do
+      it "should remove the pid_file and launch the start command" do
         expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
+        expect(@process).to receive(:remove_pid_file)
         expect(@process).to receive(:`).with(@process.start_command)
         @process.start
       end

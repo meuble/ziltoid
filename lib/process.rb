@@ -48,6 +48,7 @@ module Ziltoid
 
     def start
       return if Ziltoid::System.pid_alive?(self.pid)
+      remove_pid_file
       %x(#{self.start_command})
     end
 
