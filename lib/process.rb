@@ -22,6 +22,14 @@ module Ziltoid
       end
     end
 
+    def alive?
+      Ziltoid::System.pid_alive?(self.pid)
+    end
+
+    def dead?
+      !alive?
+    end
+
     def remove_pid_file
       if self.pid_file && File.exist?(self.pid_file)
         File.delete(self.pid_file)

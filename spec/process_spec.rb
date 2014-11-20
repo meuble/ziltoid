@@ -65,6 +65,42 @@ describe Ziltoid::Process do
     end
   end
 
+  describe "#alive?" do
+    it "should return true if pid is alive" do
+      expect(Ziltoid::System).to receive(:pid_alive?).and_return(true)
+      proc = Ziltoid::Process.new("dummy process", :pid_file => "sample_pid_file.pid")
+      expect(proc.alive?).to be true
+    end
+
+    it "should return false if pid is not alive" do
+      proc = Ziltoid::Process.new("dummy process", :pid_file => "sample_pid_file.fake.pid")
+      expect(proc.alive?).to be false
+    end
+
+    it "should return false if process pid is nil" do
+      proc = Ziltoid::Process.new("dummy process")
+      expect(proc.alive?).to be false
+    end
+  end
+
+  describe "#dead?" do
+    it "should return false if pid is alive" do
+      expect(Ziltoid::System).to receive(:pid_alive?).and_return(true)
+      proc = Ziltoid::Process.new("dummy process", :pid_file => "sample_pid_file.pid")
+      expect(proc.dead?).to be false
+    end
+
+    it "should return true if pid is not alive" do
+      proc = Ziltoid::Process.new("dummy process", :pid_file => "sample_pid_file.fake.pid")
+      expect(proc.dead?).to be true
+    end
+
+    it "should return true if process pid is nil" do
+      proc = Ziltoid::Process.new("dummy process")
+      expect(proc.dead?).to be true
+    end
+  end
+
   describe "#remove_pid_file" do
     it "should return nil if the process has no pid_file" do
       proc = Ziltoid::Process.new("dummy process")
