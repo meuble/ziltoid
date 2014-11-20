@@ -2,6 +2,8 @@ module Ziltoid
   class Process
     attr_accessor :name, :ram_limit, :cpu_limit, :start_command, :stop_command, :restart_command, :pid_file
 
+    WAIT_TIME_BEFORE_CHECK = 1.0
+
     def initialize(name, options = {})
       self.name = name
       self.ram_limit = options[:limit] ? options[:limit][:ram] : nil
@@ -50,11 +52,26 @@ module Ziltoid
     end
 
     def stop
-      if !Ziltoid::System.pid_alive?(self.pid)
-        self.remove_pid_file
-        return
+      memoized_pid = self.pid
+
+      if dead?
+        remove_pid_file
       else
-        %x(#{self.stop_command})
+
+        thread = Thread.new do
+          %x(#{self.stop_command})
+          sleep(WAIT_TIME_BEFORE_CHECK)
+          if alive?
+            %x(kill #{memoized_pid})
+            sleep(WAIT_TIME_BEFORE_CHECK)
+            if alive?
+              %x(kill -9 #{memoized_pid})
+              sleep(WAIT_TIME_BEFORE_CHECK)
+            end
+          end
+          remove_pid_file if dead?
+        end.join
+
       end
     end
 

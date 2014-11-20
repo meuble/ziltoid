@@ -183,9 +183,43 @@ describe Ziltoid::Process do
         expect(@process.stop).to be_nil
       end
 
-      it "should launch the start command" do
-        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true)
+      it "should launch the stop command" do
+        allow(@process).to receive(:remove_pid_file)
         expect(@process).to receive(:`).with(@process.stop_command)
+        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, false, true)
+        @process.stop
+      end
+
+      it "should launch the stop command and the kill command if stop failed" do
+        allow(@process).to receive(:remove_pid_file)
+        allow(@process).to receive(:`).with(anything())
+        expect(@process).to receive(:`).with(@process.stop_command)
+        expect(@process).to receive(:`).with("kill 12345")
+        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, true, false, true)
+        @process.stop
+      end
+
+      it "should launch the stop command, the kill command AND the kill -9 if stop and kill failed" do
+        allow(@process).to receive(:remove_pid_file)
+        allow(@process).to receive(:`).with(anything())
+        expect(@process).to receive(:`).with("kill 12345")
+        expect(@process).to receive(:`).with("kill -9 12345")
+        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, true, true, true)
+        @process.stop
+      end
+
+      it "should remove the pid file if the process has been properly killed" do
+        allow(@process).to receive(:remove_pid_file)
+        allow(@process).to receive(:`).with(anything())
+        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, false, false)
+        expect(@process).to receive(:remove_pid_file).once
+        @process.stop
+      end
+
+      it "should not remove the pid file at the end if the process has not been properly killed" do
+        allow(@process).to receive(:`).with(anything())
+        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, false, true)
+        expect(@process).not_to receive(:remove_pid_file)
         @process.stop
       end
     end
