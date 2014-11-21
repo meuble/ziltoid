@@ -46,6 +46,18 @@ module Ziltoid
       Ziltoid::System.ram_usage(self.pid, include_children) > self.ram_limit.to_i
     end
 
+    def watch!
+      if alive?
+        if above_cpu_limit?
+          restart
+        elsif above_ram_limit?
+          restart
+        end
+      else
+        start
+      end
+    end
+
     def start
       return if Ziltoid::System.pid_alive?(self.pid)
       remove_pid_file

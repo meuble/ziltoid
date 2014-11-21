@@ -303,5 +303,73 @@ describe Ziltoid::Process do
         end
       end
     end
+
+    describe "#watch" do
+      context "when the process has no pid" do
+        let :process do
+          Ziltoid::Process.new("dummy process", {
+            :commands => {
+              :start => "/etc/init.d/script start",
+              :stop => "/etc/init.d/script stop",
+              :restart => "/etc/init.d/script restart"
+            }
+          })
+        end
+
+        it "should start the process" do
+          expect(process.pid).to be_nil
+          expect(process).to receive(:start)
+          process.watch!
+        end
+      end
+
+      context "when the process has a pid" do
+        describe "with a dead pid" do
+          before :each do
+            expect(@process).to receive(:alive?).and_return(false)
+          end
+
+          it "should start the process" do
+            expect(@process).to receive(:start)
+            @process.watch!
+          end
+
+          it "should clean the pid" do
+            expect(@process).to receive(:`).with(@process.start_command)
+            expect(@process).to receive(:remove_pid_file)
+            @process.watch!
+          end
+        end
+
+        describe "with an alive pid" do
+          it "should do nothing if ram and cpu are below limit" do
+            expect(@process).to receive(:alive?).and_return(true)
+            expect(@process).to receive(:above_cpu_limit?).and_return(false)
+            expect(@process).to receive(:above_ram_limit?).and_return(false)
+            expect(@process).not_to receive(:start)
+            expect(@process).not_to receive(:stop)
+            expect(@process).not_to receive(:restart)
+            @process.watch!
+          end
+
+          it "should restart if cpu is above limit" do
+            expect(@process).to receive(:alive?).and_return(true)
+            expect(@process).to receive(:above_cpu_limit?).and_return(true)
+            expect(@process).to receive(:restart)
+            @process.watch!
+          end
+
+          it "should restart if ram is above limit" do
+            expect(@process).to receive(:alive?).and_return(true)
+            expect(@process).to receive(:above_cpu_limit?).and_return(false)
+            expect(@process).to receive(:above_ram_limit?).and_return(true)
+            expect(@process).to receive(:restart)
+            @process.watch!
+          end
+
+        end
+      end
+
+    end
   end
 end
