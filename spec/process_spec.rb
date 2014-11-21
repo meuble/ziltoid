@@ -242,5 +242,66 @@ describe Ziltoid::Process do
       end
     end
 
+    describe "#restart" do
+      context "when the process has no pid" do
+        let :process do
+          Ziltoid::Process.new("dummy process", {
+            :commands => {
+              :start => "/etc/init.d/script start",
+              :stop => "/etc/init.d/script stop",
+              :restart => "/etc/init.d/script restart"
+            }
+          })
+        end
+
+        it "should start the process" do
+          expect(process.pid).to be_nil
+          expect(process).to receive(:start)
+          process.restart
+        end
+      end
+
+      context "when the process has a pid" do
+        describe "with a dead pid" do
+          before :each do
+            expect(@process).to receive(:alive?).and_return(false)
+          end
+
+          it "should start the process" do
+            expect(@process).to receive(:start)
+            @process.restart
+          end
+
+          it "should clean the pid" do
+            expect(@process).to receive(:`).with(@process.start_command)
+            expect(@process).to receive(:remove_pid_file)
+            @process.restart
+          end
+        end
+
+        describe "with an alive pid" do
+          it "should stop and start the process if the process has no restart command" do
+            proc = Ziltoid::Process.new("dummy process", {
+              :pid_file => sample_pid_file_path,
+              :commands => {
+                :start => "/etc/init.d/script start",
+                :stop => "/etc/init.d/script stop"
+              }
+            })
+
+            expect(proc).to receive(:alive?).and_return(true)
+            expect(proc).to receive(:stop)
+            expect(proc).to receive(:start)
+            proc.restart
+          end
+
+          it "should send the restart_command if one is available" do
+            expect(@process).to receive(:alive?).and_return(true)
+            expect(@process).to receive(:`).with(@process.restart_command)
+            @process.restart
+          end
+        end
+      end
+    end
   end
 end

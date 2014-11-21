@@ -76,5 +76,18 @@ module Ziltoid
       end
     end
 
+    def restart
+      if alive?
+        if self.restart_command
+          %x(#{self.restart_command})
+        else
+          stop
+          start
+        end
+      else
+        start
+      end
+    end
+
   end
 end
