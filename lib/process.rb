@@ -47,15 +47,8 @@ module Ziltoid
     end
 
     def watch!
-      if alive?
-        if above_cpu_limit?
-          restart
-        elsif above_ram_limit?
-          restart
-        end
-      else
-        start
-      end
+      return start unless alive?
+      return restart if above_cpu_limit? || above_ram_limit?
     end
 
     def start
@@ -89,16 +82,10 @@ module Ziltoid
     end
 
     def restart
-      if alive?
-        if self.restart_command
-          %x(#{self.restart_command})
-        else
-          stop
-          start
-        end
-      else
-        start
-      end
+      alive = self.alive?
+      return %x(#{self.restart_command}) if alive && self.restart_command
+      stop if alive
+      return start
     end
 
   end
