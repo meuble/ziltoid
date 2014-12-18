@@ -49,15 +49,15 @@ module Ziltoid
     def watch!
       Watcher.log("Ziltoid is watching process #{self.name}")
       if !alive?
-        Watcher.log("Process #{self.name} is dead")
+        Watcher.log("Process #{self.name} is dead", Logger::WARN)
         return start
       end
       if above_cpu_limit?
-        Watcher.log("Process #{self.name} is above CPU limit (#{self.cpu_limit.to_f})")
+        Watcher.log("Process #{self.name} is above CPU limit (#{self.cpu_limit.to_f})", Logger::WARN)
         return restart
       end
       if above_ram_limit?
-        Watcher.log("Process #{self.name} is above RAM limit (#{self.ram_limit.to_f})")
+        Watcher.log("Process #{self.name} is above RAM limit (#{self.ram_limit.to_f})", Logger::WARN)
         return restart
       end
     end
