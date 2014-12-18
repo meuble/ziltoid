@@ -47,17 +47,30 @@ module Ziltoid
     end
 
     def watch!
-      return start unless alive?
-      return restart if above_cpu_limit? || above_ram_limit?
+      Watcher.log("Ziltoid is watching process #{self.name}")
+      if !alive?
+        Watcher.log("Process #{self.name} is dead")
+        return start
+      end
+      if above_cpu_limit?
+        Watcher.log("Process #{self.name} is above CPU limit (#{self.cpu_limit.to_f})")
+        return restart
+      end
+      if above_ram_limit?
+        Watcher.log("Process #{self.name} is above RAM limit (#{self.ram_limit.to_f})")
+        return restart
+      end
     end
 
     def start
       return if Ziltoid::System.pid_alive?(self.pid)
+      Watcher.log("Ziltoid is starting process #{self.name}")
       remove_pid_file
       %x(#{self.start_command})
     end
 
     def stop
+      Watcher.log("Ziltoid is stoping process #{self.name}")
       memoized_pid = self.pid
 
       if dead?
@@ -82,6 +95,7 @@ module Ziltoid
     end
 
     def restart
+      Watcher.log("Ziltoid is restarting process #{self.name}")
       alive = self.alive?
       return %x(#{self.restart_command}) if alive && self.restart_command
       stop if alive

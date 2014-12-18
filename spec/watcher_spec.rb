@@ -57,4 +57,44 @@ describe Ziltoid::Watcher do
       w.watch!
     end
   end
+
+  describe "::logger" do
+    it "should be a singleton" do
+      logger = Logger.new($stdout)
+      Ziltoid::Watcher.new(:logger => logger)
+      expect(Ziltoid::Watcher.logger).to eq(logger)
+    end
+  end
+
+  describe "::log" do
+    class NullLoger < Logger
+      def initialize(*args)
+      end
+
+      def add(*args, &block)
+      end
+    end
+
+    before :each do
+      Ziltoid::Watcher.new(:logger => NullLoger.new)
+    end
+
+    it "should log message" do
+      message = "log message"
+      expect(Ziltoid::Watcher.logger).to receive(:add).with(anything, message)
+      Ziltoid::Watcher.log(message)
+    end
+
+    it "should add with info default level" do
+      message = "log message"
+      expect(Ziltoid::Watcher.logger).to receive(:add).with(Logger::INFO, message)
+      Ziltoid::Watcher.log(message)
+    end
+
+    it "should accept a log level" do
+      message = "log message"
+      expect(Ziltoid::Watcher.logger).to receive(:add).with(Logger::DEBUG, message)
+      Ziltoid::Watcher.log(message, Logger::DEBUG)
+    end
+  end
 end

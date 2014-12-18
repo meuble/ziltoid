@@ -175,6 +175,14 @@ describe Ziltoid::Process do
         expect(@process).to receive(:`).with(@process.start_command)
         @process.start
       end
+
+      it "should log the action" do
+        expect(Ziltoid::Watcher).to receive(:log).once
+        allow(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
+        allow(@process).to receive(:remove_pid_file)
+        allow(@process).to receive(:`).with(@process.start_command)
+        @process.start
+      end
     end
 
     describe "#stop" do
@@ -240,6 +248,14 @@ describe Ziltoid::Process do
         expect(@process).not_to receive(:remove_pid_file)
         @process.stop
       end
+
+      it "should log the action" do
+        expect(Ziltoid::Watcher).to receive(:log).once
+        allow(@process).to receive(:`).with(anything())
+        allow(Ziltoid::System).to receive(:pid_alive?).and_return(false)
+        allow(@process).to receive(:remove_pid_file)
+        @process.stop
+      end
     end
 
     describe "#restart" do
@@ -301,6 +317,20 @@ describe Ziltoid::Process do
             @process.restart
           end
         end
+      end
+
+      it "should log the action" do
+        proc = Ziltoid::Process.new("dummy process", {
+          :pid_file => sample_pid_file_path,
+          :commands => {
+            :start => "/etc/init.d/script start",
+            :stop => "/etc/init.d/script stop"
+          }
+        })
+        expect(Ziltoid::Watcher).to receive(:log)
+        allow(proc).to receive(:alive?).and_return(false)
+        allow(proc).to receive(:start)
+        proc.restart
       end
     end
 

@@ -23,6 +23,12 @@ RSpec.configure do |config|
   config.expect_with :rspec do |c|
     c.syntax = :expect
   end
+
+  # Silence logger output to $stdout
+  config.before(:all) do 
+    $stderr = StringIO.new
+    $stdout = StringIO.new
+  end
 end
 
 def sample_pid_file_path
