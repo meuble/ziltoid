@@ -139,13 +139,13 @@ describe Ziltoid::Process do
 
   describe "#above_ram_limit?(include_children = true)" do
     it "should not exceed the ram limit" do
-      proc = Ziltoid::Process.new("dummy process", :limit => {:ram => 200000}, :pid_file => sample_pid_file_path)
+      proc = Ziltoid::Process.new("dummy process", :limit => {:ram => 200}, :pid_file => sample_pid_file_path)
       expect(Ziltoid::System).to receive(:ram_usage).and_return(190000)
       expect(proc).not_to be_above_ram_limit
     end
 
     it "should exceed the ram limit" do
-      proc = Ziltoid::Process.new("dummy process", :limit => {:ram => 200000}, :pid_file => sample_pid_file_path)
+      proc = Ziltoid::Process.new("dummy process", :limit => {:ram => 200}, :pid_file => sample_pid_file_path)
       expect(Ziltoid::System).to receive(:ram_usage).and_return(250000)
       expect(proc).to be_above_ram_limit
     end

@@ -43,7 +43,7 @@ module Ziltoid
     end
 
     def above_ram_limit?(include_children = true)
-      Ziltoid::System.ram_usage(self.pid, include_children) > self.ram_limit.to_i
+      Ziltoid::System.ram_usage(self.pid, include_children) > self.ram_limit.to_i * 1024
     end
 
     def watch!
