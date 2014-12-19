@@ -163,17 +163,17 @@ describe Ziltoid::Process do
       })
     end
 
-    describe "#start" do
+    describe "#start!" do
       it "should return nil if the process is already running" do
         expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true)
-        expect(@process.start).to be_nil
+        expect(@process.start!).to be_nil
       end
 
       it "should remove the pid_file and launch the start command" do
         expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
         expect(@process).to receive(:remove_pid_file)
         expect(@process).to receive(:`).with(@process.start_command)
-        @process.start
+        @process.start!
       end
 
       it "should log the action" do
@@ -181,15 +181,15 @@ describe Ziltoid::Process do
         allow(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
         allow(@process).to receive(:remove_pid_file)
         allow(@process).to receive(:`).with(@process.start_command)
-        @process.start
+        @process.start!
       end
     end
 
-    describe "#stop" do
+    describe "#stop!" do
       it "should remove the pid file if the process is not running and return nil" do
         expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
         expect(@process).to receive(:remove_pid_file)
-        expect(@process.stop).to be_nil
+        expect(@process.stop!).to be_nil
       end
 
       it "should send kill and kill-9 commands if there is no stop command" do
@@ -206,14 +206,14 @@ describe Ziltoid::Process do
         expect(proc).to receive(:`).with("kill 12345")
         expect(proc).to receive(:`).with("kill -9 12345")
         expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, true, true, true)
-        proc.stop
+        proc.stop!
       end
 
       it "should launch the stop command" do
         allow(@process).to receive(:remove_pid_file)
         expect(@process).to receive(:`).with(@process.stop_command)
         expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, false, true)
-        @process.stop
+        @process.stop!
       end
 
       it "should launch the stop command and the kill command if stop failed" do
@@ -222,7 +222,7 @@ describe Ziltoid::Process do
         expect(@process).to receive(:`).with(@process.stop_command)
         expect(@process).to receive(:`).with("kill 12345")
         expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, true, false, true)
-        @process.stop
+        @process.stop!
       end
 
       it "should launch the stop command, the kill command AND the kill -9 if stop and kill failed" do
@@ -231,7 +231,7 @@ describe Ziltoid::Process do
         expect(@process).to receive(:`).with("kill 12345")
         expect(@process).to receive(:`).with("kill -9 12345")
         expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, true, true, true)
-        @process.stop
+        @process.stop!
       end
 
       it "should remove the pid file if the process has been properly killed" do
@@ -239,14 +239,14 @@ describe Ziltoid::Process do
         allow(@process).to receive(:`).with(anything())
         expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, false, false)
         expect(@process).to receive(:remove_pid_file).once
-        @process.stop
+        @process.stop!
       end
 
       it "should not remove the pid file at the end if the process has not been properly killed" do
         allow(@process).to receive(:`).with(anything())
         expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, false, true)
         expect(@process).not_to receive(:remove_pid_file)
-        @process.stop
+        @process.stop!
       end
 
       it "should log the action" do
@@ -254,11 +254,11 @@ describe Ziltoid::Process do
         allow(@process).to receive(:`).with(anything())
         allow(Ziltoid::System).to receive(:pid_alive?).and_return(false)
         allow(@process).to receive(:remove_pid_file)
-        @process.stop
+        @process.stop!
       end
     end
 
-    describe "#restart" do
+    describe "#restart!" do
       context "when the process has no pid" do
         let :process do
           Ziltoid::Process.new("dummy process", {
@@ -272,8 +272,8 @@ describe Ziltoid::Process do
 
         it "should start the process" do
           expect(process.pid).to be_nil
-          expect(process).to receive(:start)
-          process.restart
+          expect(process).to receive(:start!)
+          process.restart!
         end
       end
 
@@ -284,14 +284,14 @@ describe Ziltoid::Process do
           end
 
           it "should start the process" do
-            expect(@process).to receive(:start)
-            @process.restart
+            expect(@process).to receive(:start!)
+            @process.restart!
           end
 
           it "should clean the pid" do
             expect(@process).to receive(:`).with(@process.start_command)
             expect(@process).to receive(:remove_pid_file)
-            @process.restart
+            @process.restart!
           end
         end
 
@@ -306,15 +306,15 @@ describe Ziltoid::Process do
             })
 
             expect(proc).to receive(:alive?).and_return(true)
-            expect(proc).to receive(:stop)
-            expect(proc).to receive(:start)
-            proc.restart
+            expect(proc).to receive(:stop!)
+            expect(proc).to receive(:start!)
+            proc.restart!
           end
 
           it "should send the restart_command if one is available" do
             expect(@process).to receive(:alive?).and_return(true)
             expect(@process).to receive(:`).with(@process.restart_command)
-            @process.restart
+            @process.restart!
           end
         end
       end
@@ -329,8 +329,8 @@ describe Ziltoid::Process do
         })
         expect(Ziltoid::Watcher).to receive(:log)
         allow(proc).to receive(:alive?).and_return(false)
-        allow(proc).to receive(:start)
-        proc.restart
+        allow(proc).to receive(:start!)
+        proc.restart!
       end
     end
 
@@ -348,7 +348,7 @@ describe Ziltoid::Process do
 
         it "should start the process" do
           expect(process.pid).to be_nil
-          expect(process).to receive(:start)
+          expect(process).to receive(:start!)
           process.watch!
         end
       end
@@ -360,7 +360,7 @@ describe Ziltoid::Process do
           end
 
           it "should start the process" do
-            expect(@process).to receive(:start)
+            expect(@process).to receive(:start!)
             @process.watch!
           end
 
@@ -376,16 +376,16 @@ describe Ziltoid::Process do
             expect(@process).to receive(:alive?).and_return(true)
             expect(@process).to receive(:above_cpu_limit?).and_return(false)
             expect(@process).to receive(:above_ram_limit?).and_return(false)
-            expect(@process).not_to receive(:start)
-            expect(@process).not_to receive(:stop)
-            expect(@process).not_to receive(:restart)
+            expect(@process).not_to receive(:start!)
+            expect(@process).not_to receive(:stop!)
+            expect(@process).not_to receive(:restart!)
             @process.watch!
           end
 
           it "should restart if cpu is above limit" do
             expect(@process).to receive(:alive?).and_return(true)
             expect(@process).to receive(:above_cpu_limit?).and_return(true)
-            expect(@process).to receive(:restart)
+            expect(@process).to receive(:restart!)
             @process.watch!
           end
 
@@ -393,7 +393,7 @@ describe Ziltoid::Process do
             expect(@process).to receive(:alive?).and_return(true)
             expect(@process).to receive(:above_cpu_limit?).and_return(false)
             expect(@process).to receive(:above_ram_limit?).and_return(true)
-            expect(@process).to receive(:restart)
+            expect(@process).to receive(:restart!)
             @process.watch!
           end
 

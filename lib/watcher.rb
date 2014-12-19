@@ -49,5 +49,16 @@ module Ziltoid
         watchable.watch!
       end
     end
+
+    def run!(command = "watch")
+      case command
+      when "watch"
+      when "start!"
+      when "stop!"
+      when "restart!"
+      else
+      end
+    end
+
   end
 end
