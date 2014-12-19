@@ -11,6 +11,7 @@ end
 require File.join(File.dirname(__FILE__), '..', 'lib', 'watcher')
 require File.join(File.dirname(__FILE__), '..', 'lib', 'process')
 require File.join(File.dirname(__FILE__), '..', 'lib', 'system')
+require File.join(File.dirname(__FILE__), '..', 'lib', 'email_notifier')
 
 RSpec.configure do |config|
   config.mock_with :rspec

@@ -4,7 +4,12 @@ GEM
     awesome_print (1.2.0)
     diff-lcs (1.2.5)
     docile (1.1.5)
+    mail (2.6.3)
+      mime-types (>= 1.16, < 3)
+    mime-types (2.4.3)
     multi_json (1.10.1)
+    pony (1.11)
+      mail (>= 2.0)
     rack (1.5.2)
     rspec (3.1.0)
       rspec-core (~> 3.1.0)
@@ -29,6 +34,7 @@ PLATFORMS
 
 DEPENDENCIES
   awesome_print
+  pony
   rack (~> 1.1)
   rspec
   simplecov
