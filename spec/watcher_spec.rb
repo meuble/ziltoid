@@ -32,6 +32,19 @@ describe Ziltoid::Watcher do
     end
   end
 
+  describe "::notifiers" do
+    it "should set notifiers" do
+      w = Ziltoid::Watcher.new(:notifiers => ["toto"])
+      expect(w.notifiers).to eq(["toto"])
+    end
+
+    it "should be singleton" do
+      w = Ziltoid::Watcher.new(:notifiers => ["toto"])
+      expect(Ziltoid::Watcher.new.notifiers).to eq(["toto"])
+      expect(Ziltoid::Watcher.notifiers).to eq(["toto"])
+    end
+  end
+
   describe "#add" do
     it "should have a watchlist" do
       w = Ziltoid::Watcher.new
@@ -94,6 +107,26 @@ describe Ziltoid::Watcher do
     it "should accept a log level" do
       message = "log message"
       expect(Ziltoid::Watcher.logger).to receive(:add).with(Logger::DEBUG, message)
+      Ziltoid::Watcher.log(message, Logger::DEBUG)
+    end
+
+    it "should send message to notifiers if level is aboce info" do
+      message = "log message"
+      mock_notifier = double
+      mock_notifier_2 = double
+      expect(mock_notifier).to receive(:send).with(message)
+      expect(mock_notifier_2).to receive(:send).with(message)
+      w = Ziltoid::Watcher.new(:notifiers => [mock_notifier, mock_notifier_2])
+      Ziltoid::Watcher.log(message, Logger::ERROR)
+    end
+
+    it "should not send message to notifiers if level is under info" do
+      message = "log message"
+      mock_notifier = double
+      mock_notifier_2 = double
+      expect(mock_notifier).not_to receive(:send).with(message)
+      expect(mock_notifier_2).not_to receive(:send).with(message)
+      w = Ziltoid::Watcher.new(:notifiers => [mock_notifier, mock_notifier_2])
       Ziltoid::Watcher.log(message, Logger::DEBUG)
     end
   end
