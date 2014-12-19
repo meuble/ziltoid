@@ -64,13 +64,13 @@ module Ziltoid
 
     def start
       return if Ziltoid::System.pid_alive?(self.pid)
-      Watcher.log("Ziltoid is starting process #{self.name}")
+      Watcher.log("Ziltoid is starting process #{self.name}", Logger::WARN)
       remove_pid_file
       %x(#{self.start_command})
     end
 
     def stop
-      Watcher.log("Ziltoid is stoping process #{self.name}")
+      Watcher.log("Ziltoid is stoping process #{self.name}", Logger::WARN)
       memoized_pid = self.pid
 
       if dead?
@@ -95,7 +95,7 @@ module Ziltoid
     end
 
     def restart
-      Watcher.log("Ziltoid is restarting process #{self.name}")
+      Watcher.log("Ziltoid is restarting process #{self.name}", Logger::WARN)
       alive = self.alive?
       return %x(#{self.restart_command}) if alive && self.restart_command
       stop if alive
