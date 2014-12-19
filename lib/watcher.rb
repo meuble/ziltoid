@@ -43,19 +43,23 @@ module Ziltoid
       self.watchlist[watchable.name] = watchable
     end
 
-    def watch!
-      Watcher.log("Ziltoid is on duty, begining the watch")
+    def run!(command = "watch")
+      Watcher.log("Ziltoid is now #{command}ing all watchables !")
       watchlist.values.each do |watchable|
-        watchable.watch!
+        watchable.send("#{command}!".to_sym)
       end
     end
 
-    def run!(command = "watch")
+    def run(command = "watch")
       case command
       when "watch"
-      when "start!"
-      when "stop!"
-      when "restart!"
+        run!("watch")
+      when "start"
+        run!("start")
+      when "stop"
+        run!("stop")
+      when "restart"
+        run!("restart")
       else
       end
     end

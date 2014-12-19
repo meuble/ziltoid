@@ -59,18 +59,6 @@ describe Ziltoid::Watcher do
     end
   end
 
-  describe "#watch!" do
-    it "should sed watch to every watchables" do
-      w = Ziltoid::Watcher.new
-      5.times do |i| 
-        p = Ziltoid::Process.new("dummy process #{i}")
-        expect(p).to receive(:watch!).once()
-        w.add(p)
-      end
-      w.watch!
-    end
-  end
-
   describe "::logger" do
     it "should be a singleton" do
       logger = Logger.new($stdout)
@@ -128,6 +116,75 @@ describe Ziltoid::Watcher do
       expect(mock_notifier_2).not_to receive(:send).with(message)
       w = Ziltoid::Watcher.new(:notifiers => [mock_notifier, mock_notifier_2])
       Ziltoid::Watcher.log(message, Logger::DEBUG)
+    end
+  end
+
+  describe "#run!(command = 'watch')" do
+    it "should send watch! to every watchables" do
+      w = Ziltoid::Watcher.new
+      5.times do |i|
+        p = Ziltoid::Process.new("dummy process #{i}")
+        expect(p).to receive(:watch!).once()
+        w.add(p)
+      end
+      w.run!("watch")
+    end
+
+    it "should send start! to every watchables" do
+      w = Ziltoid::Watcher.new
+      5.times do |i|
+        p = Ziltoid::Process.new("dummy process #{i}")
+        expect(p).to receive(:start!).once()
+        w.add(p)
+      end
+      w.run!("start")
+    end
+
+    it "should send restart! to every watchables" do
+      w = Ziltoid::Watcher.new
+      5.times do |i|
+        p = Ziltoid::Process.new("dummy process #{i}")
+        expect(p).to receive(:restart!).once()
+        w.add(p)
+      end
+      w.run!("restart")
+    end
+
+    it "should send start! to every watchables" do
+      w = Ziltoid::Watcher.new
+      5.times do |i|
+        p = Ziltoid::Process.new("dummy process #{i}")
+        expect(p).to receive(:stop!).once()
+        w.add(p)
+      end
+      w.run!("stop")
+    end
+
+  end
+
+  describe "#run(command = 'watch')" do
+    it "should send run! method with watch argument" do
+      w = Ziltoid::Watcher.new
+      expect(w).to receive(:run!).once().with("watch")
+      w.run("watch")
+    end
+
+    it "should send run! method with start argument" do
+      w = Ziltoid::Watcher.new
+      expect(w).to receive(:run!).once().with("start")
+      w.run("start")
+    end
+
+    it "should send run! method with stop argument" do
+      w = Ziltoid::Watcher.new
+      expect(w).to receive(:run!).once().with("stop")
+      w.run("stop")
+    end
+
+    it "should send run! method with restart argument" do
+      w = Ziltoid::Watcher.new
+      expect(w).to receive(:run!).once().with("restart")
+      w.run("restart")
     end
   end
 end
