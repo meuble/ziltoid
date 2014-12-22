@@ -99,3 +99,9 @@ It comes from Devin Townsen famous album "Ziltoid the omniscient".
 Ziltoid is omniscient, watches everything and control everything. Even processes.
 
 Ziltoid is given to you by [The Social Client](http://www.thesocialclient.com), a digital and CRM consultant agency.
+
+## Licencing
+
+Ziltoid is a [Beerware](http://en.wikipedia.org/wiki/Beerware) and is licensed under the terms of the [WTFPL](http://www.wtfpl.net), see the included WTFPL-LICENSE file.
+
+If we meet some day, and you think this stuff is worth it, you can buy us a beer in return.
