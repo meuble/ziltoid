@@ -8,11 +8,7 @@ SimpleCov.start do
   add_filter "/spec/"
 end
 
-require File.join(File.dirname(__FILE__), '..', 'lib', 'watcher')
-require File.join(File.dirname(__FILE__), '..', 'lib', 'process')
-require File.join(File.dirname(__FILE__), '..', 'lib', 'system')
-require File.join(File.dirname(__FILE__), '..', 'lib', 'email_notifier')
-require File.join(File.dirname(__FILE__), '..', 'lib', 'command_parser')
+require File.join(File.dirname(__FILE__), '..', 'lib', 'ziltoid')
 
 RSpec.configure do |config|
   config.mock_with :rspec
