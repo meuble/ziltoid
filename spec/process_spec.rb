@@ -181,17 +181,10 @@ describe Ziltoid::Process do
       file = Ziltoid::Watcher.read_state
       expect(file).to have_key(@process.name)
       expect(file[@process.name]["state"]).to eq("started")
-      expect(file[@process.name]["count"]).to eq(1)
       expect(file[@process.name]["updated_at"]).to eq(time.to_i)
     end
 
     context "when updating with the same state" do
-      it "should increment count key" do
-        @process.update_process_state("started")
-        @process.update_process_state("started")
-        expect(Ziltoid::Watcher.read_state[@process.name]["count"]).to eq(2)
-      end
-
       it "should not update the updated_at key" do
         @process.update_process_state("started")
         updated_at = Ziltoid::Watcher.read_state[@process.name]["updated_at"]
@@ -201,12 +194,6 @@ describe Ziltoid::Process do
     end
 
     context "when updating with a different state" do
-      it "should set count key to 1" do
-        @process.update_process_state("started")
-        @process.update_process_state("stopped")
-        expect(Ziltoid::Watcher.read_state[@process.name]["count"]).to eq(1)
-      end
-
       it "should update the updated_at key" do
         @process.update_process_state("started")
         updated_at = Ziltoid::Watcher.read_state[@process.name]["updated_at"]

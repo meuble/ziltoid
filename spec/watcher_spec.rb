@@ -102,8 +102,8 @@ describe Ziltoid::Watcher do
 
     context "when the file exists and is not empty" do
       it "should return the correct state as a ruby hash" do
-        w = Ziltoid::Watcher.new(:state_file => sample_state_file_path)
-        expect(Ziltoid::Watcher.read_state).to eq({"lighty" => {"state" => "started", "count" => 1, "updated_at" => 11111}})
+        w = Ziltoid::Watcher.new(:state_file => File.join(File.dirname(__FILE__), '..', 'spec', 'files', 'sample_read_state_file.ziltoid'))
+        expect(Ziltoid::Watcher.read_state).to eq({"lighty" => {"state" => "started", "updated_at" => 11111}})
       end
     end
   end

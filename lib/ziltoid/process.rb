@@ -54,7 +54,6 @@ module Ziltoid
 
       process_states[self.name] = {
         "state" => state,
-        "count" => memoized_process_state && memoized_process_state["state"] == state ? memoized_process_state["count"].to_i + 1 : 1,
         "updated_at" => memoized_process_state && memoized_process_state["state"] == state ? memoized_process_state["updated_at"].to_i : Time.now.to_i
       }
       Ziltoid::Watcher.write_state(process_states)

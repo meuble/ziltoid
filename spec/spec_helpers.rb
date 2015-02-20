@@ -27,6 +27,11 @@ RSpec.configure do |config|
     $stderr = StringIO.new
     $stdout = StringIO.new
   end
+
+  config.after(:all) do
+    file = File.join(File.dirname(__FILE__), 'files', 'sample_state_file.ziltoid')
+    File.delete(file) if File.exist?(file)
+  end
 end
 
 def sample_pid_file_path
