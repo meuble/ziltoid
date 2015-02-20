@@ -151,6 +151,72 @@ describe Ziltoid::Process do
     end
   end
 
+  describe "#update_process_state(state)" do
+    before :each do
+      File.delete(sample_state_file_path) if File.exist?(sample_state_file_path)
+      @watcher = Ziltoid::Watcher.new(:state_file => sample_state_file_path)
+      @process = Ziltoid::Process.new("dummy process", {
+        :commands => {
+          :start => "/etc/init.d/script start",
+          :stop => "/etc/init.d/script stop",
+          :restart => "/etc/init.d/script restart"
+        }
+      })
+    end
+
+    it "should return nil when state is not allowed" do
+      expect(@process.update_process_state("fake-state")).to be_nil
+    end
+
+    it "should write the state to the state file" do
+      expect(Ziltoid::Watcher).to receive(:write_state).and_call_original
+      @process.update_process_state("started")
+    end
+
+    it "should create a 'process name' entry in the state file if it does not exist" do
+      time ||= Time.now
+      allow(Time).to receive(:now).and_return(time)
+      expect(Ziltoid::Watcher.read_state).not_to have_key(@process.name)
+      @process.update_process_state("started")
+      file = Ziltoid::Watcher.read_state
+      expect(file).to have_key(@process.name)
+      expect(file[@process.name]["state"]).to eq("started")
+      expect(file[@process.name]["count"]).to eq(1)
+      expect(file[@process.name]["updated_at"]).to eq(time.to_i)
+    end
+
+    context "when updating with the same state" do
+      it "should increment count key" do
+        @process.update_process_state("started")
+        @process.update_process_state("started")
+        expect(Ziltoid::Watcher.read_state[@process.name]["count"]).to eq(2)
+      end
+
+      it "should not update the updated_at key" do
+        @process.update_process_state("started")
+        updated_at = Ziltoid::Watcher.read_state[@process.name]["updated_at"]
+        @process.update_process_state("started")
+        expect(Ziltoid::Watcher.read_state[@process.name]["updated_at"]).to eq(updated_at)
+      end
+    end
+
+    context "when updating with a different state" do
+      it "should set count key to 1" do
+        @process.update_process_state("started")
+        @process.update_process_state("stopped")
+        expect(Ziltoid::Watcher.read_state[@process.name]["count"]).to eq(1)
+      end
+
+      it "should update the updated_at key" do
+        @process.update_process_state("started")
+        updated_at = Ziltoid::Watcher.read_state[@process.name]["updated_at"]
+        sleep(2)
+        @process.update_process_state("stopped")
+        expect(Ziltoid::Watcher.read_state[@process.name]["updated_at"]).not_to eq(updated_at)
+      end
+    end
+  end
+
   context "when manipulating proccesses" do
     before :each do
       @process = Ziltoid::Process.new("dummy process", {

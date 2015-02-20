@@ -3,6 +3,7 @@ module Ziltoid
     attr_accessor :name, :ram_limit, :cpu_limit, :start_command, :stop_command, :restart_command, :pid_file
 
     WAIT_TIME_BEFORE_CHECK = 1.0
+    ALLOWED_STATES = ["started", "stopped", "above_cpu_limit", "above_ram_limit"]
 
     def initialize(name, options = {})
       self.name = name
@@ -44,6 +45,19 @@ module Ziltoid
 
     def above_ram_limit?(include_children = true)
       Ziltoid::System.ram_usage(self.pid, include_children) > self.ram_limit.to_i * 1024
+    end
+
+    def update_process_state(state)
+      process_states = Ziltoid::Watcher.read_state
+      return nil unless ALLOWED_STATES.include?(state)
+      memoized_process_state = process_states[self.name]
+
+      process_states[self.name] = {
+        "state" => state,
+        "count" => memoized_process_state && memoized_process_state["state"] == state ? memoized_process_state["count"].to_i + 1 : 1,
+        "updated_at" => memoized_process_state && memoized_process_state["state"] == state ? memoized_process_state["updated_at"].to_i : Time.now.to_i
+      }
+      Ziltoid::Watcher.write_state(process_states)
     end
 
     def watch!
