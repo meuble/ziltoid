@@ -47,6 +47,15 @@ module Ziltoid
       Ziltoid::System.ram_usage(self.pid, include_children) > self.ram_limit.to_i * 1024
     end
 
+    def state
+      state_hash = Ziltoid::Watcher.read_state[self.name]
+      state_hash["state"] if state_hash
+    end
+
+    def updated_at
+      state_hash = Ziltoid::Watcher.read_state[self.name]
+      state_hash["updated_at"] if state_hash
+    end
     def update_process_state(state)
       process_states = Ziltoid::Watcher.read_state
       return nil unless ALLOWED_STATES.include?(state)

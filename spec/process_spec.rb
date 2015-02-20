@@ -151,6 +151,41 @@ describe Ziltoid::Process do
     end
   end
 
+  describe "#state" do
+    before :each do
+      File.delete(sample_state_file_path) if File.exist?(sample_state_file_path)
+      watcher = Ziltoid::Watcher.new(:state_file => sample_state_file_path)
+      @process = Ziltoid::Process.new("dummy process")
+    end
+
+    it "should return nil if process is not in the state hash" do
+      expect(@process.state).to be_nil
+    end
+
+    it "should return the state of the process" do
+      @process.update_process_state("started")
+      expect(@process.state).to eq("started")
+    end
+  end
+
+  describe "#updated_at" do
+    before :each do
+      File.delete(sample_state_file_path) if File.exist?(sample_state_file_path)
+      watcher = Ziltoid::Watcher.new(:state_file => sample_state_file_path)
+      @process = Ziltoid::Process.new("dummy process")
+    end
+
+    it "should return nil if process is not in the state hash" do
+      expect(@process.state).to be_nil
+    end
+
+    it "should return the updated_at of the process" do
+      time ||= Time.now
+      allow(Time).to receive(:now).and_return(time)
+      @process.update_process_state("started")
+      expect(@process.updated_at).to eq(time.to_i)
+    end
+  end
   describe "#update_process_state(state)" do
     before :each do
       File.delete(sample_state_file_path) if File.exist?(sample_state_file_path)
