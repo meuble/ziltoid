@@ -46,6 +46,33 @@ describe Ziltoid::Process do
         expect(proc.cpu_limit).to eq(10)
       end
     end
+
+    describe "grace times" do
+      it "should set start grace time" do
+        proc = Ziltoid::Process.new("dummy process", {:grace_times => {:start => 60}})
+        expect(proc.start_grace_time).to eq(60)
+      end
+
+      it "should set stop grace time" do
+        proc = Ziltoid::Process.new("dummy process", {:grace_times => {:stop => 60}})
+        expect(proc.stop_grace_time).to eq(60)
+      end
+
+      it "should set restart grace time" do
+        proc = Ziltoid::Process.new("dummy process", {:grace_times => {:restart => 60}})
+        expect(proc.restart_grace_time).to eq(60)
+      end
+
+      it "should set cpu grace time" do
+        proc = Ziltoid::Process.new("dummy process", {:grace_times => {:cpu => 60}})
+        expect(proc.cpu_grace_time).to eq(60)
+      end
+
+      it "should set ram grace time" do
+        proc = Ziltoid::Process.new("dummy process", {:grace_times => {:ram => 60}})
+        expect(proc.ram_grace_time).to eq(60)
+      end
+    end
   end
 
   describe "#pid" do
@@ -186,6 +213,110 @@ describe Ziltoid::Process do
       expect(@process.updated_at).to eq(time.to_i)
     end
   end
+
+  describe "#processable?(target_state)" do
+    before :each do
+      File.delete(sample_state_file_path) if File.exist?(sample_state_file_path)
+      watcher = Ziltoid::Watcher.new(:state_file => sample_state_file_path)
+      @process = Ziltoid::Process.new("dummy process", {:grace_times => {:start => 10, :stop => 10, :restart => 10, :cpu => 10, :ram => 10}})
+    end
+
+    context "when wanting to start a process" do
+      it "should return true if grace time is over" do
+        allow(@process).to receive(:updated_at).and_return(Time.now.to_i - 1000)
+        @process.update_process_state("started")
+        expect(@process.processable?("started")).to be true
+      end
+
+      it "should return false if grace time is not over" do
+        time ||= Time.now
+        allow(Time).to receive(:now).and_return(time)
+        @process.update_process_state("started")
+        expect(@process.processable?("started")).to be false
+      end
+    end
+
+    context "when wanting to stop a process" do
+      it "should return true if grace time is over" do
+        allow(@process).to receive(:updated_at).and_return(Time.now.to_i - 1000)
+        @process.update_process_state("stopped")
+        expect(@process.processable?("stopped")).to be true
+      end
+
+      it "should return false if grace time is not over" do
+        time ||= Time.now
+        allow(Time).to receive(:now).and_return(time)
+        @process.update_process_state("stopped")
+        expect(@process.processable?("stopped")).to be false
+      end
+    end
+
+    context "when wanting to restart a process" do
+      it "should return true if grace time is over" do
+        allow(@process).to receive(:updated_at).and_return(Time.now.to_i - 1000)
+        @process.update_process_state("restarted")
+        expect(@process.processable?("restarted")).to be true
+      end
+
+      it "should return false if grace time is not over" do
+        time ||= Time.now
+        allow(Time).to receive(:now).and_return(time)
+        @process.update_process_state("restarted")
+        expect(@process.processable?("restarted")).to be false
+      end
+    end
+
+    context "when wanting to process above_cpu_limit" do
+      context "when previous state is not above_cpu_limit" do
+        it "should return false" do
+          allow(@process).to receive(:updated_at).and_return(Time.now.to_i - 1000)
+          @process.update_process_state("restarted")
+          expect(@process.processable?("above_cpu_limit")).to be false
+        end
+      end
+
+      context "when previous state is above_cpu_limit" do
+        it "should return true if grace time is over" do
+          allow(@process).to receive(:updated_at).and_return(Time.now.to_i - 1000)
+          @process.update_process_state("above_cpu_limit")
+          expect(@process.processable?("above_cpu_limit")).to be true
+        end
+
+        it "should return false if grace time is not over" do
+          time ||= Time.now
+          allow(Time).to receive(:now).and_return(time)
+          @process.update_process_state("above_cpu_limit")
+          expect(@process.processable?("above_cpu_limit")).to be false
+        end
+      end
+    end
+
+    context "when wanting to process above_ram_limit" do
+      context "when previous state is not above_ram_limit" do
+        it "should return false" do
+          allow(@process).to receive(:updated_at).and_return(Time.now.to_i - 1000)
+          @process.update_process_state("restarted")
+          expect(@process.processable?("above_ram_limit")).to be false
+        end
+      end
+
+      context "when previous state is above_ram_limit" do
+        it "should return true if grace time is over" do
+          allow(@process).to receive(:updated_at).and_return(Time.now.to_i - 1000)
+          @process.update_process_state("above_ram_limit")
+          expect(@process.processable?("above_ram_limit")).to be true
+        end
+
+        it "should return false if grace time is not over" do
+          time ||= Time.now
+          allow(Time).to receive(:now).and_return(time)
+          @process.update_process_state("above_ram_limit")
+          expect(@process.processable?("above_ram_limit")).to be false
+        end
+      end
+    end
+  end
+
   describe "#update_process_state(state)" do
     before :each do
       File.delete(sample_state_file_path) if File.exist?(sample_state_file_path)

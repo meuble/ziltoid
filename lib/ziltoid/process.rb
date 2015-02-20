@@ -1,9 +1,9 @@
 module Ziltoid
   class Process
-    attr_accessor :name, :ram_limit, :cpu_limit, :start_command, :stop_command, :restart_command, :pid_file
+    attr_accessor :name, :ram_limit, :cpu_limit, :start_command, :stop_command, :restart_command, :pid_file, :start_grace_time, :stop_grace_time, :ram_grace_time, :cpu_grace_time, :restart_grace_time
 
     WAIT_TIME_BEFORE_CHECK = 1.0
-    ALLOWED_STATES = ["started", "stopped", "above_cpu_limit", "above_ram_limit"]
+    ALLOWED_STATES = ["started", "stopped", "restarted", "above_cpu_limit", "above_ram_limit"]
 
     def initialize(name, options = {})
       self.name = name
@@ -15,6 +15,14 @@ module Ziltoid
         self.start_command = options[:commands][:start] || nil
         self.stop_command = options[:commands][:stop] || nil
         self.restart_command = options[:commands][:restart] || nil
+      end
+
+      if options[:grace_times]
+        self.start_grace_time = options[:grace_times][:start] || 0
+        self.stop_grace_time = options[:grace_times][:stop] || 0
+        self.restart_grace_time = options[:grace_times][:restart] || 0
+        self.ram_grace_time = options[:grace_times][:ram] || 0
+        self.cpu_grace_time = options[:grace_times][:cpu] || 0
       end
     end
 
@@ -56,6 +64,22 @@ module Ziltoid
       state_hash = Ziltoid::Watcher.read_state[self.name]
       state_hash["updated_at"] if state_hash
     end
+
+    def processable?(target_state)
+      case target_state
+      when "started"
+        self.updated_at.to_i < Time.now.to_i - self.start_grace_time.to_i
+      when "stopped"
+        self.updated_at < Time.now.to_i - self.stop_grace_time
+      when "restarted"
+        self.updated_at < Time.now.to_i - self.restart_grace_time
+      when "above_cpu_limit"
+        self.state == target_state && self.updated_at < Time.now.to_i - self.cpu_grace_time
+      when "above_ram_limit"
+        self.state == target_state && self.updated_at < Time.now.to_i - self.ram_grace_time
+      end
+    end
+
     def update_process_state(state)
       process_states = Ziltoid::Watcher.read_state
       return nil unless ALLOWED_STATES.include?(state)
