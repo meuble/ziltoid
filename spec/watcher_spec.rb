@@ -67,6 +67,25 @@ describe Ziltoid::Watcher do
     end
   end
 
+  describe "::state_file" do
+    it "should be a singleton" do
+      Ziltoid::Watcher.new(:state_file => "some/path/to/state/file")
+      expect(Ziltoid::Watcher.state_file).to eq("some/path/to/state/file")
+    end
+  end
+
+  describe "#state_file" do
+    it "should have a state_file" do
+      w = Ziltoid::Watcher.new
+      expect(w).to respond_to(:state_file)
+    end
+
+    it "should return the singleton state_file" do
+      w = Ziltoid::Watcher.new(:state_file => "path")
+      expect(w.state_file).to eq("path")
+    end
+  end
+
   describe "::log" do
     class NullLoger < Logger
       def initialize(*args)

@@ -31,12 +31,20 @@ module Ziltoid
       end
     end
 
+    def state_file
+      Ziltoid::Watcher.state_file
+    end
+
+    def self.state_file
+      @@state_file
+    end
     def initialize(options = {})
       self.watchlist ||= {}
       @@logger = options[:logger] || Logger.new($stdout)
       @@logger.progname = options[:progname] || "Ziltoid"
       @@logger.level = options[:log_level] || Logger::INFO
       @@notifiers = options[:notifiers] if options[:notifiers]
+      @@state_file = options[:state_file] || File.join(File.dirname(__FILE__), "..", ".ziltoid")
     end
 
     def add(watchable)
