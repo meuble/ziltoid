@@ -86,6 +86,49 @@ describe Ziltoid::Watcher do
     end
   end
 
+  describe "::read_state" do
+    context "when the file does not exist" do
+      it "should return {}" do
+        expect(Ziltoid::Watcher.read_state).to eq({})
+      end
+    end
+
+    context "when the file is empty" do
+      it "should return {}" do
+        w = Ziltoid::Watcher.new(:state_file => File.join(File.dirname(__FILE__), '..', 'spec', 'files', 'sample_empty_state_file.ziltoid'))
+        expect(Ziltoid::Watcher.read_state).to eq({})
+      end
+    end
+
+    context "when the file exists and is not empty" do
+      it "should return the correct state as a ruby hash" do
+        w = Ziltoid::Watcher.new(:state_file => sample_state_file_path)
+        expect(Ziltoid::Watcher.read_state).to eq({"lighty" => {"state" => "started", "count" => 1, "updated_at" => 11111}})
+      end
+    end
+  end
+
+  describe "::write_state(state = {})" do
+    before :each do
+      @file = File.join(File.dirname(__FILE__), '..', 'spec', 'files', 'sample_write_state_file.ziltoid')
+      File.delete(@file) if File.exist?(@file)
+    end
+
+    it "should create a state_file if it does not exist" do
+      expect(File.exist?(@file)).to be false
+      w = Ziltoid::Watcher.new(:state_file => @file)
+      w.write_state({})
+      expect(File.exist?(@file)).to be true
+    end
+
+    it "should write a JSONed version of the ziltoid state" do
+      w = Ziltoid::Watcher.new(:state_file => @file)
+      state = {"lighty" => {"state" => "started", "count" => 1, "updated_at" => 11111}}
+      w.write_state(state)
+      expect(File.read(@file)).to include(JSON.generate(state))
+    end
+  end
+
   describe "::log" do
     class NullLoger < Logger
       def initialize(*args)

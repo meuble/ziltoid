@@ -30,5 +30,9 @@ RSpec.configure do |config|
 end
 
 def sample_pid_file_path
-  File.join(File.dirname(__FILE__), '..', 'spec', 'sample_pid_file.pid')
+  File.join(File.dirname(__FILE__), '..', 'spec', 'files', 'sample_pid_file.pid')
+end
+
+def sample_state_file_path
+  File.join(File.dirname(__FILE__), '..', 'spec', 'files', 'sample_state_file.ziltoid')
 end

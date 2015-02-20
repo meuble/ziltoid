@@ -1,4 +1,5 @@
 require "logger"
+require "json"
 
 module Ziltoid
   class Watcher
@@ -38,13 +39,34 @@ module Ziltoid
     def self.state_file
       @@state_file
     end
+
+    def self.read_state
+      json = File.read(state_file) if File.exist?(state_file)
+      json = "{}" if json.nil? || json.empty?
+      JSON.load(json)
+    end
+
+    def read_state
+      self.class.read_state
+    end
+
+    def self.write_state(state = {})
+      File.open(state_file, "w+") do |file|
+        file.puts JSON.generate(state)
+      end
+    end
+
+    def write_state(state = {})
+      self.class.write_state(state)
+    end
+
     def initialize(options = {})
       self.watchlist ||= {}
       @@logger = options[:logger] || Logger.new($stdout)
       @@logger.progname = options[:progname] || "Ziltoid"
       @@logger.level = options[:log_level] || Logger::INFO
       @@notifiers = options[:notifiers] if options[:notifiers]
-      @@state_file = options[:state_file] || File.join(File.dirname(__FILE__), "..", ".ziltoid")
+      @@state_file = options[:state_file] || File.join(File.dirname(__FILE__), "..", "state.ziltoid")
     end
 
     def add(watchable)
