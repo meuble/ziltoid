@@ -82,7 +82,7 @@ module Ziltoid
       end
     end
 
-    def update_process_state(state)
+    def update_state(state)
       process_states = Ziltoid::Watcher.read_state
       return nil unless ALLOWED_STATES.include?(state)
       memoized_process_state = process_states[self.name]
@@ -101,14 +101,14 @@ module Ziltoid
         return start!
       end
       if above_cpu_limit?
-        update_process_state("above_cpu_limit")
+        update_state("above_cpu_limit")
         if processable?("above_cpu_limit")
           Watcher.log("Process #{self.name} is above CPU limit (#{self.cpu_limit.to_f})", Logger::WARN)
           return restart!
         end
       end
       if above_ram_limit?
-        update_process_state("above_ram_limit")
+        update_state("above_ram_limit")
         if processable?("above_ram_limit")
           Watcher.log("Process #{self.name} is above RAM limit (#{self.ram_limit.to_f})", Logger::WARN)
           return restart!
@@ -118,57 +118,57 @@ module Ziltoid
 
     def start!
       return if Ziltoid::System.pid_alive?(self.pid)
-      if processable?("started")
-        Watcher.log("Ziltoid is starting process #{self.name}", Logger::WARN)
-        remove_pid_file
-        %x(#{self.start_command})
-        update_process_state("started")
-      end
+      return unless processable?("started")
+
+      Watcher.log("Ziltoid is starting process #{self.name}", Logger::WARN)
+      remove_pid_file
+      %x(#{self.start_command})
+      update_state("started")
     end
 
     def stop!
-      if processable?("stopped")
-        Watcher.log("Ziltoid is stoping process #{self.name}", Logger::WARN)
-        memoized_pid = self.pid
+      return unless processable?("stopped")
 
-        if dead?
-          remove_pid_file
-        else
+      Watcher.log("Ziltoid is stoping process #{self.name}", Logger::WARN)
+      memoized_pid = self.pid
 
-          thread = Thread.new do
-            %x(#{self.stop_command})
+      if dead?
+        remove_pid_file
+      else
+
+        thread = Thread.new do
+          %x(#{self.stop_command})
+          sleep(WAIT_TIME_BEFORE_CHECK)
+          if alive?
+            %x(kill #{memoized_pid})
             sleep(WAIT_TIME_BEFORE_CHECK)
             if alive?
-              %x(kill #{memoized_pid})
+              %x(kill -9 #{memoized_pid})
               sleep(WAIT_TIME_BEFORE_CHECK)
-              if alive?
-                %x(kill -9 #{memoized_pid})
-                sleep(WAIT_TIME_BEFORE_CHECK)
-              end
             end
-            if dead?
-              remove_pid_file
-              update_process_state("stopped")
-            end
-          end.join
+          end
+          if dead?
+            remove_pid_file
+            update_state("stopped")
+          end
+        end.join
 
-        end
       end
     end
 
     def restart!
-      if processable?("restarted")
-        Watcher.log("Ziltoid is restarting process #{self.name}", Logger::WARN)
-        alive = self.alive?
+      return unless processable?("restarted")
 
-        if alive && self.restart_command
-          update_process_state("restarted")
-          return %x(#{self.restart_command})
-        end
+      Watcher.log("Ziltoid is restarting process #{self.name}", Logger::WARN)
+      alive = self.alive?
 
-        stop! if alive
-        return start!
+      if alive && self.restart_command
+        update_state("restarted")
+        return %x(#{self.restart_command})
       end
+
+      stop! if alive
+      return start!
     end
 
   end

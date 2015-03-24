@@ -190,7 +190,7 @@ describe Ziltoid::Process do
     end
 
     it "should return the state of the process" do
-      @process.update_process_state("started")
+      @process.update_state("started")
       expect(@process.state).to eq("started")
     end
   end
@@ -209,7 +209,7 @@ describe Ziltoid::Process do
     it "should return the updated_at of the process" do
       time ||= Time.now
       allow(Time).to receive(:now).and_return(time)
-      @process.update_process_state("started")
+      @process.update_state("started")
       expect(@process.updated_at).to eq(time.to_i)
     end
   end
@@ -224,14 +224,14 @@ describe Ziltoid::Process do
     context "when wanting to start a process" do
       it "should return true if grace time is over" do
         allow(@process).to receive(:updated_at).and_return(Time.now.to_i - 1000)
-        @process.update_process_state("started")
+        @process.update_state("started")
         expect(@process.processable?("started")).to be true
       end
 
       it "should return false if grace time is not over" do
         time ||= Time.now
         allow(Time).to receive(:now).and_return(time)
-        @process.update_process_state("started")
+        @process.update_state("started")
         expect(@process.processable?("started")).to be false
       end
 
@@ -244,14 +244,14 @@ describe Ziltoid::Process do
     context "when wanting to stop a process" do
       it "should return true if grace time is over" do
         allow(@process).to receive(:updated_at).and_return(Time.now.to_i - 1000)
-        @process.update_process_state("stopped")
+        @process.update_state("stopped")
         expect(@process.processable?("stopped")).to be true
       end
 
       it "should return false if grace time is not over" do
         time ||= Time.now
         allow(Time).to receive(:now).and_return(time)
-        @process.update_process_state("stopped")
+        @process.update_state("stopped")
         expect(@process.processable?("stopped")).to be false
       end
 
@@ -264,14 +264,14 @@ describe Ziltoid::Process do
     context "when wanting to restart a process" do
       it "should return true if grace time is over" do
         allow(@process).to receive(:updated_at).and_return(Time.now.to_i - 1000)
-        @process.update_process_state("restarted")
+        @process.update_state("restarted")
         expect(@process.processable?("restarted")).to be true
       end
 
       it "should return false if grace time is not over" do
         time ||= Time.now
         allow(Time).to receive(:now).and_return(time)
-        @process.update_process_state("restarted")
+        @process.update_state("restarted")
         expect(@process.processable?("restarted")).to be false
       end
 
@@ -285,7 +285,7 @@ describe Ziltoid::Process do
       context "when previous state is not above_cpu_limit" do
         it "should return false" do
           allow(@process).to receive(:updated_at).and_return(Time.now.to_i - 1000)
-          @process.update_process_state("restarted")
+          @process.update_state("restarted")
           expect(@process.processable?("above_cpu_limit")).to be false
         end
       end
@@ -293,14 +293,14 @@ describe Ziltoid::Process do
       context "when previous state is above_cpu_limit" do
         it "should return true if grace time is over" do
           allow(@process).to receive(:updated_at).and_return(Time.now.to_i - 1000)
-          @process.update_process_state("above_cpu_limit")
+          @process.update_state("above_cpu_limit")
           expect(@process.processable?("above_cpu_limit")).to be true
         end
 
         it "should return false if grace time is not over" do
           time ||= Time.now
           allow(Time).to receive(:now).and_return(time)
-          @process.update_process_state("above_cpu_limit")
+          @process.update_state("above_cpu_limit")
           expect(@process.processable?("above_cpu_limit")).to be false
         end
       end
@@ -315,7 +315,7 @@ describe Ziltoid::Process do
       context "when previous state is not above_ram_limit" do
         it "should return false" do
           allow(@process).to receive(:updated_at).and_return(Time.now.to_i - 1000)
-          @process.update_process_state("restarted")
+          @process.update_state("restarted")
           expect(@process.processable?("above_ram_limit")).to be false
         end
       end
@@ -323,14 +323,14 @@ describe Ziltoid::Process do
       context "when previous state is above_ram_limit" do
         it "should return true if grace time is over" do
           allow(@process).to receive(:updated_at).and_return(Time.now.to_i - 1000)
-          @process.update_process_state("above_ram_limit")
+          @process.update_state("above_ram_limit")
           expect(@process.processable?("above_ram_limit")).to be true
         end
 
         it "should return false if grace time is not over" do
           time ||= Time.now
           allow(Time).to receive(:now).and_return(time)
-          @process.update_process_state("above_ram_limit")
+          @process.update_state("above_ram_limit")
           expect(@process.processable?("above_ram_limit")).to be false
         end
       end
@@ -342,7 +342,7 @@ describe Ziltoid::Process do
     end
   end
 
-  describe "#update_process_state(state)" do
+  describe "#update_state(state)" do
     before :each do
       File.delete(sample_state_file_path) if File.exist?(sample_state_file_path)
       @watcher = Ziltoid::Watcher.new(:state_file => sample_state_file_path)
@@ -356,19 +356,19 @@ describe Ziltoid::Process do
     end
 
     it "should return nil when state is not allowed" do
-      expect(@process.update_process_state("fake-state")).to be_nil
+      expect(@process.update_state("fake-state")).to be_nil
     end
 
     it "should write the state to the state file" do
       expect(Ziltoid::Watcher).to receive(:write_state).and_call_original
-      @process.update_process_state("started")
+      @process.update_state("started")
     end
 
     it "should create a 'process name' entry in the state file if it does not exist" do
       time ||= Time.now
       allow(Time).to receive(:now).and_return(time)
       expect(Ziltoid::Watcher.read_state).not_to have_key(@process.name)
-      @process.update_process_state("started")
+      @process.update_state("started")
       file = Ziltoid::Watcher.read_state
       expect(file).to have_key(@process.name)
       expect(file[@process.name]["state"]).to eq("started")
@@ -377,19 +377,19 @@ describe Ziltoid::Process do
 
     context "when updating with the same state" do
       it "should not update the updated_at key" do
-        @process.update_process_state("started")
+        @process.update_state("started")
         updated_at = Ziltoid::Watcher.read_state[@process.name]["updated_at"]
-        @process.update_process_state("started")
+        @process.update_state("started")
         expect(Ziltoid::Watcher.read_state[@process.name]["updated_at"]).to eq(updated_at)
       end
     end
 
     context "when updating with a different state" do
       it "should update the updated_at key" do
-        @process.update_process_state("started")
+        @process.update_state("started")
         updated_at = Ziltoid::Watcher.read_state[@process.name]["updated_at"]
         sleep(2)
-        @process.update_process_state("stopped")
+        @process.update_state("stopped")
         expect(Ziltoid::Watcher.read_state[@process.name]["updated_at"]).not_to eq(updated_at)
       end
     end
@@ -433,7 +433,7 @@ describe Ziltoid::Process do
           allow(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
           expect(@process).to receive(:remove_pid_file)
           expect(@process).to receive(:`).with(@process.start_command)
-          allow(@process).to receive(:update_process_state).with("started")
+          allow(@process).to receive(:update_state).with("started")
           @process.start!
         end
 
@@ -442,12 +442,12 @@ describe Ziltoid::Process do
           allow(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
           allow(@process).to receive(:remove_pid_file)
           allow(@process).to receive(:`).with(@process.start_command)
-          allow(@process).to receive(:update_process_state).with("started")
+          allow(@process).to receive(:update_state).with("started")
           @process.start!
         end
 
         it "should update the process state to started" do
-          @process.update_process_state("stopped")
+          @process.update_state("stopped")
           expect(@process.state).not_to eq("started")
           allow(Ziltoid::Watcher).to receive(:log).once
           allow(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
@@ -524,7 +524,7 @@ describe Ziltoid::Process do
         end
 
         it "should update the process state to stopped if the process has been properly killed" do
-          @process.update_process_state("started")
+          @process.update_state("started")
           expect(@process.state).not_to eq("stopped")
           allow(@process).to receive(:remove_pid_file).twice
           allow(@process).to receive(:`).with(anything())
@@ -559,7 +559,7 @@ describe Ziltoid::Process do
         end
 
         it "should not update the process state" do
-          @process.update_process_state("started")
+          @process.update_state("started")
           expect(@process.state).not_to eq("stopped")
           @process.stop!
           expect(@process.state).not_to eq("stopped")
@@ -637,7 +637,7 @@ describe Ziltoid::Process do
               end
 
               it "should update the process state to restarted" do
-                @process.update_process_state("started")
+                @process.update_state("started")
                 expect(@process.state).not_to eq("restarted")
                 allow(@process).to receive(:alive?).and_return(true)
                 allow(@process).to receive(:`).with(@process.restart_command)
@@ -667,7 +667,7 @@ describe Ziltoid::Process do
         end
 
         it "should not update the process state" do
-          @process.update_process_state("started")
+          @process.update_state("started")
           expect(@process.state).not_to eq("restarted")
           @process.restart!
           expect(@process.state).not_to eq("restarted")
@@ -731,7 +731,7 @@ describe Ziltoid::Process do
               end
 
               it "should update the process state to above_cpu_limit" do
-                @process.update_process_state("started")
+                @process.update_state("started")
                 expect(@process.state).not_to eq("above_cpu_limit")
                 allow(@process).to receive(:alive?).and_return(true)
                 allow(@process).to receive(:above_cpu_limit?).and_return(true)
@@ -756,7 +756,7 @@ describe Ziltoid::Process do
               end
 
               it "should update the process state to above_cpu_limit" do
-                @process.update_process_state("started")
+                @process.update_state("started")
                 expect(@process.state).not_to eq("above_cpu_limit")
                 allow(@process).to receive(:processable?).with("restarted").and_return(false)
                 allow(@process).to receive(:alive?).and_return(true)
@@ -785,7 +785,7 @@ describe Ziltoid::Process do
               end
 
               it "should update the process state to above_ram_limit" do
-                @process.update_process_state("started")
+                @process.update_state("started")
                 expect(@process.state).not_to eq("above_ram_limit")
                 allow(@process).to receive(:alive?).and_return(true)
                 allow(@process).to receive(:above_ram_limit?).and_return(true)
@@ -810,7 +810,7 @@ describe Ziltoid::Process do
               end
 
               it "should update the process state to above_ram_limit" do
-                @process.update_process_state("started")
+                @process.update_state("started")
                 expect(@process.state).not_to eq("above_ram_limit")
                 allow(@process).to receive(:processable?).with("restarted").and_return(false)
                 allow(@process).to receive(:alive?).and_return(true)
