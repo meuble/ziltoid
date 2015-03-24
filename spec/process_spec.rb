@@ -234,6 +234,11 @@ describe Ziltoid::Process do
         @process.update_process_state("started")
         expect(@process.processable?("started")).to be false
       end
+
+      it "should return true if the process is not in the state hash" do
+        process = Ziltoid::Process.new("some proc")
+        expect(process.processable?("started")).to be true
+      end
     end
 
     context "when wanting to stop a process" do
@@ -249,6 +254,11 @@ describe Ziltoid::Process do
         @process.update_process_state("stopped")
         expect(@process.processable?("stopped")).to be false
       end
+
+      it "should return false if the process is not in the state hash" do
+        process = Ziltoid::Process.new("some proc")
+        expect(process.processable?("stopped")).to be false
+      end
     end
 
     context "when wanting to restart a process" do
@@ -263,6 +273,11 @@ describe Ziltoid::Process do
         allow(Time).to receive(:now).and_return(time)
         @process.update_process_state("restarted")
         expect(@process.processable?("restarted")).to be false
+      end
+
+      it "should return false if the process is not in the state hash" do
+        process = Ziltoid::Process.new("some proc")
+        expect(process.processable?("restarted")).to be false
       end
     end
 
@@ -289,6 +304,11 @@ describe Ziltoid::Process do
           expect(@process.processable?("above_cpu_limit")).to be false
         end
       end
+
+      it "should return false if the process is not in the state hash" do
+        process = Ziltoid::Process.new("some proc")
+        expect(process.processable?("above_cpu_limit")).to be false
+      end
     end
 
     context "when wanting to process above_ram_limit" do
@@ -313,6 +333,11 @@ describe Ziltoid::Process do
           @process.update_process_state("above_ram_limit")
           expect(@process.processable?("above_ram_limit")).to be false
         end
+      end
+
+      it "should return false if the process is not in the state hash" do
+        process = Ziltoid::Process.new("some proc")
+        expect(process.processable?("above_ram_limit")).to be false
       end
     end
   end
@@ -372,6 +397,7 @@ describe Ziltoid::Process do
 
   context "when manipulating proccesses" do
     before :each do
+      watcher = Ziltoid::Watcher.new(:state_file => sample_state_file_path)
       @process = Ziltoid::Process.new("dummy process", {
         :pid_file => sample_pid_file_path,
         :commands => {
@@ -388,168 +414,264 @@ describe Ziltoid::Process do
         expect(@process.start!).to be_nil
       end
 
-      it "should remove the pid_file and launch the start command" do
-        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
-        expect(@process).to receive(:remove_pid_file)
-        expect(@process).to receive(:`).with(@process.start_command)
-        @process.start!
+      context "when process is not processable" do
+        before :each do
+          allow(@process).to receive(:processable?).with("started").and_return(false)
+        end
+
+        it "should return nil" do
+          expect(@process.start!).to be_nil
+        end
       end
 
-      it "should log the action" do
-        expect(Ziltoid::Watcher).to receive(:log).once
-        allow(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
-        allow(@process).to receive(:remove_pid_file)
-        allow(@process).to receive(:`).with(@process.start_command)
-        @process.start!
+      context "when process is processable" do
+        before :each do
+          allow(@process).to receive(:processable?).with("started").and_return(true)
+        end
+
+        it "should remove the pid_file and launch the start command" do
+          allow(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
+          expect(@process).to receive(:remove_pid_file)
+          expect(@process).to receive(:`).with(@process.start_command)
+          allow(@process).to receive(:update_process_state).with("started")
+          @process.start!
+        end
+
+        it "should log the action" do
+          expect(Ziltoid::Watcher).to receive(:log).once
+          allow(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
+          allow(@process).to receive(:remove_pid_file)
+          allow(@process).to receive(:`).with(@process.start_command)
+          allow(@process).to receive(:update_process_state).with("started")
+          @process.start!
+        end
+
+        it "should update the process state to started" do
+          @process.update_process_state("stopped")
+          expect(@process.state).not_to eq("started")
+          allow(Ziltoid::Watcher).to receive(:log).once
+          allow(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
+          allow(@process).to receive(:remove_pid_file)
+          allow(@process).to receive(:`).with(@process.start_command)
+
+          @process.start!
+          expect(@process.state).to eq("started")
+        end
       end
     end
 
     describe "#stop!" do
-      it "should remove the pid file if the process is not running and return nil" do
-        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
-        expect(@process).to receive(:remove_pid_file)
-        expect(@process.stop!).to be_nil
+      context "when process is processable" do
+        before :each do
+          allow(@process).to receive(:processable?).with("stopped").and_return(true)
+        end
+
+        it "should remove the pid file if the process is not running and return nil" do
+          expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(false)
+          expect(@process).to receive(:remove_pid_file)
+          expect(@process.stop!).to be_nil
+        end
+
+        it "should send kill and kill-9 commands if there is no stop command" do
+          proc = Ziltoid::Process.new("dummy process", {
+            :pid_file => sample_pid_file_path,
+            :commands => {
+              :start => "/etc/init.d/script start",
+              :restart => "/etc/init.d/script restart"
+            }
+          })
+
+          allow(proc).to receive(:processable?).with("stopped").and_return(true)
+          allow(proc).to receive(:remove_pid_file)
+          allow(proc).to receive(:`).with(anything())
+          expect(proc).to receive(:`).with("kill 12345")
+          expect(proc).to receive(:`).with("kill -9 12345")
+          expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, true, true, true)
+          proc.stop!
+        end
+
+        it "should launch the stop command" do
+          allow(@process).to receive(:remove_pid_file)
+          expect(@process).to receive(:`).with(@process.stop_command)
+          expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, false, true)
+          @process.stop!
+        end
+
+        it "should launch the stop command and the kill command if stop failed" do
+          allow(@process).to receive(:remove_pid_file)
+          allow(@process).to receive(:`).with(anything())
+          expect(@process).to receive(:`).with(@process.stop_command)
+          expect(@process).to receive(:`).with("kill 12345")
+          expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, true, false, true)
+          @process.stop!
+        end
+
+        it "should launch the stop command, the kill command AND the kill -9 if stop and kill failed" do
+          allow(@process).to receive(:remove_pid_file)
+          allow(@process).to receive(:`).with(anything())
+          expect(@process).to receive(:`).with("kill 12345")
+          expect(@process).to receive(:`).with("kill -9 12345")
+          expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, true, true, true)
+          @process.stop!
+        end
+
+        it "should remove the pid file if the process has been properly killed" do
+          allow(@process).to receive(:remove_pid_file)
+          allow(@process).to receive(:`).with(anything())
+          expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, false, false)
+          expect(@process).to receive(:remove_pid_file).once
+          @process.stop!
+        end
+
+        it "should update the process state to stopped if the process has been properly killed" do
+          @process.update_process_state("started")
+          expect(@process.state).not_to eq("stopped")
+          allow(@process).to receive(:remove_pid_file).twice
+          allow(@process).to receive(:`).with(anything())
+          expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, false, false)
+          @process.stop!
+          expect(@process.state).to eq("stopped")
+        end
+
+        it "should not remove the pid file at the end if the process has not been properly killed" do
+          allow(@process).to receive(:`).with(anything())
+          expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, false, true)
+          expect(@process).not_to receive(:remove_pid_file)
+          @process.stop!
+        end
+
+        it "should log the action" do
+          expect(Ziltoid::Watcher).to receive(:log).once
+          allow(@process).to receive(:`).with(anything())
+          allow(Ziltoid::System).to receive(:pid_alive?).and_return(false)
+          allow(@process).to receive(:remove_pid_file)
+          @process.stop!
+        end
       end
 
-      it "should send kill and kill-9 commands if there is no stop command" do
-        proc = Ziltoid::Process.new("dummy process", {
-          :pid_file => sample_pid_file_path,
-          :commands => {
-            :start => "/etc/init.d/script start",
-            :restart => "/etc/init.d/script restart"
-          }
-        })
+      context "when process is not processable" do
+        before :each do
+          allow(@process).to receive(:processable?).with("stopped").and_return(false)
+        end
 
-        allow(proc).to receive(:remove_pid_file)
-        allow(proc).to receive(:`).with(anything())
-        expect(proc).to receive(:`).with("kill 12345")
-        expect(proc).to receive(:`).with("kill -9 12345")
-        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, true, true, true)
-        proc.stop!
-      end
+        it "should return nil" do
+          expect(@process.stop!).to be_nil
+        end
 
-      it "should launch the stop command" do
-        allow(@process).to receive(:remove_pid_file)
-        expect(@process).to receive(:`).with(@process.stop_command)
-        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, false, true)
-        @process.stop!
-      end
-
-      it "should launch the stop command and the kill command if stop failed" do
-        allow(@process).to receive(:remove_pid_file)
-        allow(@process).to receive(:`).with(anything())
-        expect(@process).to receive(:`).with(@process.stop_command)
-        expect(@process).to receive(:`).with("kill 12345")
-        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, true, false, true)
-        @process.stop!
-      end
-
-      it "should launch the stop command, the kill command AND the kill -9 if stop and kill failed" do
-        allow(@process).to receive(:remove_pid_file)
-        allow(@process).to receive(:`).with(anything())
-        expect(@process).to receive(:`).with("kill 12345")
-        expect(@process).to receive(:`).with("kill -9 12345")
-        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, true, true, true)
-        @process.stop!
-      end
-
-      it "should remove the pid file if the process has been properly killed" do
-        allow(@process).to receive(:remove_pid_file)
-        allow(@process).to receive(:`).with(anything())
-        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, false, false)
-        expect(@process).to receive(:remove_pid_file).once
-        @process.stop!
-      end
-
-      it "should not remove the pid file at the end if the process has not been properly killed" do
-        allow(@process).to receive(:`).with(anything())
-        expect(Ziltoid::System).to receive(:pid_alive?).with(12345).and_return(true, false, true)
-        expect(@process).not_to receive(:remove_pid_file)
-        @process.stop!
-      end
-
-      it "should log the action" do
-        expect(Ziltoid::Watcher).to receive(:log).once
-        allow(@process).to receive(:`).with(anything())
-        allow(Ziltoid::System).to receive(:pid_alive?).and_return(false)
-        allow(@process).to receive(:remove_pid_file)
-        @process.stop!
+        it "should not update the process state" do
+          @process.update_process_state("started")
+          expect(@process.state).not_to eq("stopped")
+          @process.stop!
+          expect(@process.state).not_to eq("stopped")
+        end
       end
     end
 
     describe "#restart!" do
-      context "when the process has no pid" do
-        let :process do
-          Ziltoid::Process.new("dummy process", {
-            :commands => {
-              :start => "/etc/init.d/script start",
-              :stop => "/etc/init.d/script stop",
-              :restart => "/etc/init.d/script restart"
-            }
-          })
+      context "when the process is processable" do
+        before :each do
+          allow(@process).to receive(:processable?).and_return(true)
         end
 
-        it "should start the process" do
-          expect(process.pid).to be_nil
-          expect(process).to receive(:start!)
-          process.restart!
-        end
-      end
-
-      context "when the process has a pid" do
-        describe "with a dead pid" do
-          before :each do
-            expect(@process).to receive(:alive?).and_return(false)
+        context "when the process has no pid" do
+          let :process do
+            Ziltoid::Process.new("dummy process", {
+              :commands => {
+                :start => "/etc/init.d/script start",
+                :stop => "/etc/init.d/script stop",
+                :restart => "/etc/init.d/script restart"
+              }
+            })
           end
 
           it "should start the process" do
-            expect(@process).to receive(:start!)
-            @process.restart!
-          end
-
-          it "should clean the pid" do
-            expect(@process).to receive(:`).with(@process.start_command)
-            expect(@process).to receive(:remove_pid_file)
-            @process.restart!
+            allow(process).to receive(:processable?).and_return(true)
+            expect(process.pid).to be_nil
+            expect(process).to receive(:start!)
+            process.restart!
           end
         end
 
-        describe "with an alive pid" do
-          it "should stop and start the process if the process has no restart command" do
-            proc = Ziltoid::Process.new("dummy process", {
-              :pid_file => sample_pid_file_path,
-              :commands => {
-                :start => "/etc/init.d/script start",
-                :stop => "/etc/init.d/script stop"
-              }
-            })
+        context "when the process has a pid" do
+          context "when the process is dead" do
+            before :each do
+              expect(@process).to receive(:alive?).and_return(false)
+            end
 
-            expect(proc).to receive(:alive?).and_return(true)
-            expect(proc).to receive(:stop!)
-            expect(proc).to receive(:start!)
-            proc.restart!
+            it "should start the process" do
+              expect(@process).to receive(:start!)
+              @process.restart!
+            end
+
+            it "should clean the pid" do
+              expect(@process).to receive(:`).with(@process.start_command)
+              expect(@process).to receive(:remove_pid_file)
+              @process.restart!
+            end
           end
 
-          it "should send the restart_command if one is available" do
-            expect(@process).to receive(:alive?).and_return(true)
-            expect(@process).to receive(:`).with(@process.restart_command)
-            @process.restart!
+          context "when the process is alive" do
+            context "when the process has no restart command" do
+              it "should stop and start the process" do
+                proc = Ziltoid::Process.new("dummy process", {
+                  :pid_file => sample_pid_file_path,
+                  :commands => {
+                    :start => "/etc/init.d/script start",
+                    :stop => "/etc/init.d/script stop"
+                  }
+                })
+                allow(proc).to receive(:processable?).and_return(true)
+
+                allow(proc).to receive(:alive?).and_return(true)
+                expect(proc).to receive(:stop!)
+                expect(proc).to receive(:start!)
+                proc.restart!
+              end
+            end
+
+            context "when the process has a restart command" do
+              it "should send the restart_command if one is available" do
+                allow(@process).to receive(:alive?).and_return(true)
+                expect(@process).to receive(:`).with(@process.restart_command)
+                @process.restart!
+              end
+
+              it "should update the process state to restarted" do
+                @process.update_process_state("started")
+                expect(@process.state).not_to eq("restarted")
+                allow(@process).to receive(:alive?).and_return(true)
+                allow(@process).to receive(:`).with(@process.restart_command)
+                @process.restart!
+
+                expect(@process.state).to eq("restarted")
+              end
+            end
           end
+        end
+
+        it "should log the action" do
+          expect(Ziltoid::Watcher).to receive(:log)
+          allow(@process).to receive(:alive?).and_return(false)
+          allow(@process).to receive(:start!)
+          @process.restart!
         end
       end
 
-      it "should log the action" do
-        proc = Ziltoid::Process.new("dummy process", {
-          :pid_file => sample_pid_file_path,
-          :commands => {
-            :start => "/etc/init.d/script start",
-            :stop => "/etc/init.d/script stop"
-          }
-        })
-        expect(Ziltoid::Watcher).to receive(:log)
-        allow(proc).to receive(:alive?).and_return(false)
-        allow(proc).to receive(:start!)
-        proc.restart!
+      context "when the process is not processable" do
+        before :each do
+          allow(@process).to receive(:processable?).and_return(false)
+        end
+
+        it "should return nil" do
+          expect(@process.restart!).to be_nil
+        end
+
+        it "should not update the process state" do
+          @process.update_process_state("started")
+          expect(@process.state).not_to eq("restarted")
+          @process.restart!
+          expect(@process.state).not_to eq("restarted")
+        end
       end
     end
 
@@ -584,6 +706,7 @@ describe Ziltoid::Process do
           end
 
           it "should clean the pid" do
+            allow(@process).to receive(:processable?).with("started").and_return(true)
             expect(@process).to receive(:`).with(@process.start_command)
             expect(@process).to receive(:remove_pid_file)
             @process.watch!
@@ -601,22 +724,115 @@ describe Ziltoid::Process do
             @process.watch!
           end
 
-          it "should restart if cpu is above limit" do
-            expect(@process).to receive(:alive?).and_return(true)
-            expect(@process).to receive(:above_cpu_limit?).and_return(true)
-            expect(@process).to receive(:restart!)
-            @process.watch!
+          context "when the cpu usage is above limit" do
+            context "when the process is not processable" do
+              before :each do
+                allow(@process).to receive(:processable?).with("above_cpu_limit").and_return(false)
+              end
+
+              it "should update the process state to above_cpu_limit" do
+                @process.update_process_state("started")
+                expect(@process.state).not_to eq("above_cpu_limit")
+                allow(@process).to receive(:alive?).and_return(true)
+                allow(@process).to receive(:above_cpu_limit?).and_return(true)
+                allow(@process).to receive(:above_ram_limit?).and_return(false)
+
+                @process.watch!
+                expect(@process.state).to eq("above_cpu_limit")
+              end
+
+              it "should not send restart" do
+                expect(@process).to receive(:alive?).and_return(true)
+                expect(@process).to receive(:above_cpu_limit?).and_return(true)
+                allow(@process).to receive(:above_ram_limit?).and_return(false)
+                expect(@process).not_to receive(:restart!)
+                @process.watch!
+              end
+            end
+
+            context "when the process is processable" do
+              before :each do
+                allow(@process).to receive(:processable?).with("above_cpu_limit").and_return(true)
+              end
+
+              it "should update the process state to above_cpu_limit" do
+                @process.update_process_state("started")
+                expect(@process.state).not_to eq("above_cpu_limit")
+                allow(@process).to receive(:processable?).with("restarted").and_return(false)
+                allow(@process).to receive(:alive?).and_return(true)
+                allow(@process).to receive(:above_cpu_limit?).and_return(true)
+                allow(@process).to receive(:above_ram_limit?).and_return(false)
+
+                @process.watch!
+                expect(@process.state).to eq("above_cpu_limit")
+              end
+
+              it "should send restart" do
+                expect(@process).to receive(:alive?).and_return(true)
+                expect(@process).to receive(:above_cpu_limit?).and_return(true)
+                allow(@process).to receive(:above_ram_limit?).and_return(false)
+                expect(@process).to receive(:restart!)
+                @process.watch!
+              end
+
+            end
           end
 
-          it "should restart if ram is above limit" do
-            expect(@process).to receive(:alive?).and_return(true)
-            expect(@process).to receive(:above_cpu_limit?).and_return(false)
-            expect(@process).to receive(:above_ram_limit?).and_return(true)
-            expect(@process).to receive(:restart!)
-            @process.watch!
-          end
+          context "when the ram usage is above limit" do
+            context "when the process is not processable" do
+              before :each do
+                allow(@process).to receive(:processable?).with("above_ram_limit").and_return(false)
+              end
 
+              it "should update the process state to above_ram_limit" do
+                @process.update_process_state("started")
+                expect(@process.state).not_to eq("above_ram_limit")
+                allow(@process).to receive(:alive?).and_return(true)
+                allow(@process).to receive(:above_ram_limit?).and_return(true)
+                allow(@process).to receive(:above_cpu_limit?).and_return(false)
+
+                @process.watch!
+                expect(@process.state).to eq("above_ram_limit")
+              end
+
+              it "should not send restart" do
+                expect(@process).to receive(:alive?).and_return(true)
+                expect(@process).to receive(:above_ram_limit?).and_return(true)
+                allow(@process).to receive(:above_cpu_limit?).and_return(false)
+                expect(@process).not_to receive(:restart!)
+                @process.watch!
+              end
+            end
+
+            context "when the process is processable" do
+              before :each do
+                allow(@process).to receive(:processable?).with("above_ram_limit").and_return(true)
+              end
+
+              it "should update the process state to above_ram_limit" do
+                @process.update_process_state("started")
+                expect(@process.state).not_to eq("above_ram_limit")
+                allow(@process).to receive(:processable?).with("restarted").and_return(false)
+                allow(@process).to receive(:alive?).and_return(true)
+                allow(@process).to receive(:above_ram_limit?).and_return(true)
+                allow(@process).to receive(:above_cpu_limit?).and_return(false)
+
+                @process.watch!
+                expect(@process.state).to eq("above_ram_limit")
+              end
+
+              it "should send restart" do
+                expect(@process).to receive(:alive?).and_return(true)
+                expect(@process).to receive(:above_ram_limit?).and_return(true)
+                allow(@process).to receive(:above_cpu_limit?).and_return(false)
+                expect(@process).to receive(:restart!)
+                @process.watch!
+              end
+
+            end
+          end
         end
+
       end
 
     end

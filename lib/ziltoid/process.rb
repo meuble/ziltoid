@@ -66,17 +66,19 @@ module Ziltoid
     end
 
     def processable?(target_state)
+      updated_time = self.updated_at
+
       case target_state
       when "started"
-        self.updated_at.to_i < Time.now.to_i - self.start_grace_time.to_i
+        updated_time.to_i < Time.now.to_i - self.start_grace_time.to_i
       when "stopped"
-        self.updated_at < Time.now.to_i - self.stop_grace_time
+        !updated_time.nil? && updated_time.to_i < Time.now.to_i - self.stop_grace_time.to_i
       when "restarted"
-        self.updated_at < Time.now.to_i - self.restart_grace_time
+        !updated_time.nil? && updated_time.to_i < Time.now.to_i - self.restart_grace_time.to_i
       when "above_cpu_limit"
-        self.state == target_state && self.updated_at < Time.now.to_i - self.cpu_grace_time
+        self.state == target_state && updated_time.to_i < Time.now.to_i - self.cpu_grace_time.to_i
       when "above_ram_limit"
-        self.state == target_state && self.updated_at < Time.now.to_i - self.ram_grace_time
+        self.state == target_state && updated_time.to_i < Time.now.to_i - self.ram_grace_time.to_i
       end
     end
 
@@ -99,53 +101,74 @@ module Ziltoid
         return start!
       end
       if above_cpu_limit?
-        Watcher.log("Process #{self.name} is above CPU limit (#{self.cpu_limit.to_f})", Logger::WARN)
-        return restart!
+        update_process_state("above_cpu_limit")
+        if processable?("above_cpu_limit")
+          Watcher.log("Process #{self.name} is above CPU limit (#{self.cpu_limit.to_f})", Logger::WARN)
+          return restart!
+        end
       end
       if above_ram_limit?
-        Watcher.log("Process #{self.name} is above RAM limit (#{self.ram_limit.to_f})", Logger::WARN)
-        return restart!
+        update_process_state("above_ram_limit")
+        if processable?("above_ram_limit")
+          Watcher.log("Process #{self.name} is above RAM limit (#{self.ram_limit.to_f})", Logger::WARN)
+          return restart!
+        end
       end
     end
 
     def start!
       return if Ziltoid::System.pid_alive?(self.pid)
-      Watcher.log("Ziltoid is starting process #{self.name}", Logger::WARN)
-      remove_pid_file
-      %x(#{self.start_command})
+      if processable?("started")
+        Watcher.log("Ziltoid is starting process #{self.name}", Logger::WARN)
+        remove_pid_file
+        %x(#{self.start_command})
+        update_process_state("started")
+      end
     end
 
     def stop!
-      Watcher.log("Ziltoid is stoping process #{self.name}", Logger::WARN)
-      memoized_pid = self.pid
+      if processable?("stopped")
+        Watcher.log("Ziltoid is stoping process #{self.name}", Logger::WARN)
+        memoized_pid = self.pid
 
-      if dead?
-        remove_pid_file
-      else
+        if dead?
+          remove_pid_file
+        else
 
-        thread = Thread.new do
-          %x(#{self.stop_command})
-          sleep(WAIT_TIME_BEFORE_CHECK)
-          if alive?
-            %x(kill #{memoized_pid})
+          thread = Thread.new do
+            %x(#{self.stop_command})
             sleep(WAIT_TIME_BEFORE_CHECK)
             if alive?
-              %x(kill -9 #{memoized_pid})
+              %x(kill #{memoized_pid})
               sleep(WAIT_TIME_BEFORE_CHECK)
+              if alive?
+                %x(kill -9 #{memoized_pid})
+                sleep(WAIT_TIME_BEFORE_CHECK)
+              end
             end
-          end
-          remove_pid_file if dead?
-        end.join
+            if dead?
+              remove_pid_file
+              update_process_state("stopped")
+            end
+          end.join
 
+        end
       end
     end
 
     def restart!
-      Watcher.log("Ziltoid is restarting process #{self.name}", Logger::WARN)
-      alive = self.alive?
-      return %x(#{self.restart_command}) if alive && self.restart_command
-      stop! if alive
-      return start!
+      if processable?("restarted")
+        Watcher.log("Ziltoid is restarting process #{self.name}", Logger::WARN)
+        alive = self.alive?
+
+        if alive && self.restart_command
+          update_process_state("restarted")
+          return %x(#{self.restart_command})
+        end
+
+        stop! if alive
+        return start!
+      end
     end
 
   end
