@@ -116,15 +116,15 @@ describe Ziltoid::Watcher do
 
     it "should create a state_file if it does not exist" do
       expect(File.exist?(@file)).to be false
-      w = Ziltoid::Watcher.new(:state_file => @file)
-      w.write_state({})
+      Ziltoid::Watcher.new(:state_file => @file)
+      Ziltoid::Watcher.write_state({})
       expect(File.exist?(@file)).to be true
     end
 
     it "should write a JSONed version of the ziltoid state" do
-      w = Ziltoid::Watcher.new(:state_file => @file)
+      Ziltoid::Watcher.new(:state_file => @file)
       state = {"lighty" => {"state" => "started", "count" => 1, "updated_at" => 11111}}
-      w.write_state(state)
+      Ziltoid::Watcher.write_state(state)
       expect(File.read(@file)).to include(JSON.generate(state))
     end
   end

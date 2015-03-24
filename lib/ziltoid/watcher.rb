@@ -5,6 +5,19 @@ module Ziltoid
   class Watcher
     attr_accessor :watchlist
 
+    def initialize(options = {})
+      self.watchlist ||= {}
+      @@logger = options[:logger] || Logger.new($stdout)
+      @@logger.progname = options[:progname] || "Ziltoid"
+      @@logger.level = options[:log_level] || Logger::INFO
+      @@notifiers = options[:notifiers] if options[:notifiers]
+      @@state_file = options[:state_file] || File.join(File.dirname(__FILE__), "..", "state.ziltoid")
+    end
+
+    def add(watchable)
+      self.watchlist[watchable.name] = watchable
+    end
+
     def logger
       Ziltoid::Watcher.logger
     end
@@ -46,31 +59,10 @@ module Ziltoid
       JSON.load(json)
     end
 
-    def read_state
-      self.class.read_state
-    end
-
     def self.write_state(state = {})
       File.open(state_file, "w+") do |file|
         file.puts JSON.generate(state)
       end
-    end
-
-    def write_state(state = {})
-      self.class.write_state(state)
-    end
-
-    def initialize(options = {})
-      self.watchlist ||= {}
-      @@logger = options[:logger] || Logger.new($stdout)
-      @@logger.progname = options[:progname] || "Ziltoid"
-      @@logger.level = options[:log_level] || Logger::INFO
-      @@notifiers = options[:notifiers] if options[:notifiers]
-      @@state_file = options[:state_file] || File.join(File.dirname(__FILE__), "..", "state.ziltoid")
-    end
-
-    def add(watchable)
-      self.watchlist[watchable.name] = watchable
     end
 
     def run!(command = :watch)
