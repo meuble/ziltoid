@@ -221,6 +221,15 @@ describe Ziltoid::Process do
       @process = Ziltoid::Process.new("dummy process", {:grace_times => {:start => 10, :stop => 10, :restart => 10, :cpu => 10, :ram => 10}})
     end
 
+    it "should return false if the grace time of predominant states is not over" do
+      Ziltoid::Process::PREDOMINANT_STATES.each do |p_state|
+        @process.update_process_state(p_state)
+        Ziltoid::Process::ALLOWED_STATES.each do |a_state|
+          expect(@process.processable?(a_state)).to be false
+        end
+      end
+    end
+
     context "when wanting to start a process" do
       it "should return true if grace time is over" do
         allow(@process).to receive(:updated_at).and_return(Time.now.to_i - 1000)
@@ -254,11 +263,6 @@ describe Ziltoid::Process do
         @process.update_state("stopped")
         expect(@process.processable?("stopped")).to be false
       end
-
-      it "should return false if the process is not in the state hash" do
-        process = Ziltoid::Process.new("some proc")
-        expect(process.processable?("stopped")).to be false
-      end
     end
 
     context "when wanting to restart a process" do
@@ -273,11 +277,6 @@ describe Ziltoid::Process do
         allow(Time).to receive(:now).and_return(time)
         @process.update_state("restarted")
         expect(@process.processable?("restarted")).to be false
-      end
-
-      it "should return false if the process is not in the state hash" do
-        process = Ziltoid::Process.new("some proc")
-        expect(process.processable?("restarted")).to be false
       end
     end
 

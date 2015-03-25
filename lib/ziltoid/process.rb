@@ -4,6 +4,7 @@ module Ziltoid
 
     WAIT_TIME_BEFORE_CHECK = 1.0
     ALLOWED_STATES = ["started", "stopped", "restarted", "above_cpu_limit", "above_ram_limit"]
+    PREDOMINANT_STATES = ["started", "stopped", "restarted"]
 
     def initialize(name, options = {})
       self.name = name
@@ -65,20 +66,24 @@ module Ziltoid
       state_hash["updated_at"] if state_hash
     end
 
-    def processable?(target_state)
-      updated_time = self.updated_at
+    def grace_time_over?
+      self.updated_at.to_i < Time.now.to_i - self.send("#{self.sta}")
+    end
 
+    def processable?(target_state)
+      current_state = self.state
+      # started, stopped and restarted are 'predominant' current states,
+      # we never proceed unless the corresponding grace time is over
+      return false if PREDOMINANT_STATES.include?(current_state) && self.updated_at.to_i > Time.now.to_i - self.send("#{current_state.gsub(/p?ed/, '')}_grace_time").to_i
+      return true if PREDOMINANT_STATES.include?(target_state)
+
+      # above_cpu_limit and above_ram_limit grace times are different,
+      # they represent a time a process has to be in that state to actually be processed (restarted most likely)
       case target_state
-      when "started"
-        updated_time.to_i < Time.now.to_i - self.start_grace_time.to_i
-      when "stopped"
-        !updated_time.nil? && updated_time.to_i < Time.now.to_i - self.stop_grace_time.to_i
-      when "restarted"
-        !updated_time.nil? && updated_time.to_i < Time.now.to_i - self.restart_grace_time.to_i
       when "above_cpu_limit"
-        self.state == target_state && updated_time.to_i < Time.now.to_i - self.cpu_grace_time.to_i
+        current_state == target_state && self.updated_at.to_i < Time.now.to_i - self.cpu_grace_time.to_i
       when "above_ram_limit"
-        self.state == target_state && updated_time.to_i < Time.now.to_i - self.ram_grace_time.to_i
+        current_state == target_state && self.updated_at.to_i < Time.now.to_i - self.ram_grace_time.to_i
       end
     end
 
