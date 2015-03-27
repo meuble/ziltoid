@@ -66,15 +66,12 @@ module Ziltoid
       state_hash["updated_at"] if state_hash
     end
 
-    def grace_time_over?
-      self.updated_at.to_i < Time.now.to_i - self.send("#{self.sta}")
-    end
-
     def processable?(target_state)
       current_state = self.state
       # started, stopped and restarted are 'predominant' current states,
       # we never proceed unless the corresponding grace time is over
-      return false if PREDOMINANT_STATES.include?(current_state) && self.updated_at.to_i > Time.now.to_i - self.send("#{current_state.gsub(/p?ed/, '')}_grace_time").to_i
+      Watcher.log("Current state : #{current_state} - updated_at : #{self.updated_at.to_i} - target_state : #{target_state}")
+      return false if pending_grace_time?
       return true if PREDOMINANT_STATES.include?(target_state)
 
       # above_cpu_limit and above_ram_limit grace times are different,
@@ -85,6 +82,11 @@ module Ziltoid
       when "above_ram_limit"
         current_state == target_state && self.updated_at.to_i < Time.now.to_i - self.ram_grace_time.to_i
       end
+    end
+
+    def pending_grace_time?
+      current_state = self.state
+      PREDOMINANT_STATES.include?(current_state) && self.updated_at.to_i > Time.now.to_i - self.send("#{current_state.gsub(/p?ed/, '')}_grace_time").to_i
     end
 
     def update_state(state)
@@ -106,14 +108,14 @@ module Ziltoid
         return start!
       end
       if above_cpu_limit?
-        update_state("above_cpu_limit")
+        update_state("above_cpu_limit") unless pending_grace_time?
         if processable?("above_cpu_limit")
           Watcher.log("Process #{self.name} is above CPU limit (#{self.cpu_limit.to_f})", Logger::WARN)
           return restart!
         end
       end
       if above_ram_limit?
-        update_state("above_ram_limit")
+        update_state("above_ram_limit") unless pending_grace_time?
         if processable?("above_ram_limit")
           Watcher.log("Process #{self.name} is above RAM limit (#{self.ram_limit.to_f})", Logger::WARN)
           return restart!

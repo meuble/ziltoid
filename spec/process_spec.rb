@@ -11,6 +11,13 @@ describe Ziltoid::Process do
             :start => "/etc/init.d/script start",
             :stop => "/etc/init.d/script stop",
             :restart => "/etc/init.d/script restart"
+          },
+          :grace_times => {
+            :start => 30,
+            :stop => 30,
+            :restart => 30,
+            :cpu => 30,
+            :ram => 30
           }
         })
       end
@@ -223,7 +230,7 @@ describe Ziltoid::Process do
 
     it "should return false if the grace time of predominant states is not over" do
       Ziltoid::Process::PREDOMINANT_STATES.each do |p_state|
-        @process.update_process_state(p_state)
+        @process.update_state(p_state)
         Ziltoid::Process::ALLOWED_STATES.each do |a_state|
           expect(@process.processable?(a_state)).to be false
         end
@@ -350,6 +357,13 @@ describe Ziltoid::Process do
           :start => "/etc/init.d/script start",
           :stop => "/etc/init.d/script stop",
           :restart => "/etc/init.d/script restart"
+        },
+        :grace_times => {
+          :start => 30,
+          :stop => 30,
+          :restart => 30,
+          :cpu => 30,
+          :ram => 30
         }
       })
     end
@@ -403,6 +417,13 @@ describe Ziltoid::Process do
           :start => "/etc/init.d/script start",
           :stop => "/etc/init.d/script stop",
           :restart => "/etc/init.d/script restart"
+        },
+        :grace_times => {
+          :start => 30,
+          :stop => 30,
+          :restart => 30,
+          :cpu => 30,
+          :ram => 30
         }
       })
     end
@@ -477,6 +498,13 @@ describe Ziltoid::Process do
             :commands => {
               :start => "/etc/init.d/script start",
               :restart => "/etc/init.d/script restart"
+            },
+            :grace_times => {
+              :start => 30,
+              :stop => 30,
+              :restart => 30,
+              :cpu => 30,
+              :ram => 30
             }
           })
 
@@ -579,6 +607,13 @@ describe Ziltoid::Process do
                 :start => "/etc/init.d/script start",
                 :stop => "/etc/init.d/script stop",
                 :restart => "/etc/init.d/script restart"
+              },
+              :grace_times => {
+                :start => 30,
+                :stop => 30,
+                :restart => 30,
+                :cpu => 30,
+                :ram => 30
               }
             })
           end
@@ -617,6 +652,13 @@ describe Ziltoid::Process do
                   :commands => {
                     :start => "/etc/init.d/script start",
                     :stop => "/etc/init.d/script stop"
+                  },
+                  :grace_times => {
+                    :start => 30,
+                    :stop => 30,
+                    :restart => 30,
+                    :cpu => 30,
+                    :ram => 30
                   }
                 })
                 allow(proc).to receive(:processable?).and_return(true)
@@ -682,6 +724,13 @@ describe Ziltoid::Process do
               :start => "/etc/init.d/script start",
               :stop => "/etc/init.d/script stop",
               :restart => "/etc/init.d/script restart"
+            },
+            :grace_times => {
+              :start => 30,
+              :stop => 30,
+              :restart => 30,
+              :cpu => 30,
+              :ram => 30
             }
           })
         end
@@ -729,8 +778,8 @@ describe Ziltoid::Process do
                 allow(@process).to receive(:processable?).with("above_cpu_limit").and_return(false)
               end
 
-              it "should update the process state to above_cpu_limit" do
-                @process.update_state("started")
+              it "should update the process state to above_cpu_limit if there is no pending grace time" do
+                @process.update_state("above_ram_limit")
                 expect(@process.state).not_to eq("above_cpu_limit")
                 allow(@process).to receive(:alive?).and_return(true)
                 allow(@process).to receive(:above_cpu_limit?).and_return(true)
@@ -738,6 +787,17 @@ describe Ziltoid::Process do
 
                 @process.watch!
                 expect(@process.state).to eq("above_cpu_limit")
+              end
+
+              it "should not update the process state to above_cpu_limit if there is a pending grace time" do
+                @process.update_state("started")
+                expect(@process.state).not_to eq("above_cpu_limit")
+                allow(@process).to receive(:alive?).and_return(true)
+                allow(@process).to receive(:above_cpu_limit?).and_return(true)
+                allow(@process).to receive(:above_ram_limit?).and_return(false)
+
+                @process.watch!
+                expect(@process.state).not_to eq("above_cpu_limit")
               end
 
               it "should not send restart" do
@@ -754,8 +814,20 @@ describe Ziltoid::Process do
                 allow(@process).to receive(:processable?).with("above_cpu_limit").and_return(true)
               end
 
-              it "should update the process state to above_cpu_limit" do
+              it "should not update the process state to above_cpu_limit if there is a pending grace time" do
                 @process.update_state("started")
+                expect(@process.state).not_to eq("above_cpu_limit")
+                allow(@process).to receive(:processable?).with("restarted").and_return(false)
+                allow(@process).to receive(:alive?).and_return(true)
+                allow(@process).to receive(:above_cpu_limit?).and_return(true)
+                allow(@process).to receive(:above_ram_limit?).and_return(false)
+
+                @process.watch!
+                expect(@process.state).not_to eq("above_cpu_limit")
+              end
+
+              it "should update the process state to above_cpu_limit if there is no pending grace time" do
+                @process.update_state("above_ram_limit")
                 expect(@process.state).not_to eq("above_cpu_limit")
                 allow(@process).to receive(:processable?).with("restarted").and_return(false)
                 allow(@process).to receive(:alive?).and_return(true)
@@ -783,8 +855,19 @@ describe Ziltoid::Process do
                 allow(@process).to receive(:processable?).with("above_ram_limit").and_return(false)
               end
 
-              it "should update the process state to above_ram_limit" do
+              it "should not update the process state to above_ram_limit if there is a pending grace time" do
                 @process.update_state("started")
+                expect(@process.state).not_to eq("above_ram_limit")
+                allow(@process).to receive(:alive?).and_return(true)
+                allow(@process).to receive(:above_ram_limit?).and_return(true)
+                allow(@process).to receive(:above_cpu_limit?).and_return(false)
+
+                @process.watch!
+                expect(@process.state).not_to eq("above_ram_limit")
+              end
+
+              it "should update the process state to above_ram_limit if there is no pending grace time" do
+                @process.update_state("above_cpu_limit")
                 expect(@process.state).not_to eq("above_ram_limit")
                 allow(@process).to receive(:alive?).and_return(true)
                 allow(@process).to receive(:above_ram_limit?).and_return(true)
@@ -808,8 +891,20 @@ describe Ziltoid::Process do
                 allow(@process).to receive(:processable?).with("above_ram_limit").and_return(true)
               end
 
-              it "should update the process state to above_ram_limit" do
+              it "should not update the process state to above_ram_limit if there is a pending grace time" do
                 @process.update_state("started")
+                expect(@process.state).not_to eq("above_ram_limit")
+                allow(@process).to receive(:processable?).with("restarted").and_return(false)
+                allow(@process).to receive(:alive?).and_return(true)
+                allow(@process).to receive(:above_ram_limit?).and_return(true)
+                allow(@process).to receive(:above_cpu_limit?).and_return(false)
+
+                @process.watch!
+                expect(@process.state).not_to eq("above_ram_limit")
+              end
+
+              it "should update the process state to above_ram_limit if there is no pending grace time" do
+                @process.update_state("above_cpu_limit")
                 expect(@process.state).not_to eq("above_ram_limit")
                 allow(@process).to receive(:processable?).with("restarted").and_return(false)
                 allow(@process).to receive(:alive?).and_return(true)
