@@ -129,7 +129,7 @@ module Ziltoid
 
       Watcher.log("Ziltoid is starting process #{self.name}", Logger::WARN)
       remove_pid_file
-      %x(#{self.start_command})
+      system(self.start_command)
       update_state("started")
     end
 
@@ -143,14 +143,14 @@ module Ziltoid
         remove_pid_file
       else
 
-        thread = Thread.new do
-          %x(#{self.stop_command})
+        Thread.new do
+          system(self.stop_command)
           sleep(WAIT_TIME_BEFORE_CHECK)
           if alive?
-            %x(kill #{memoized_pid})
+            system("kill #{memoized_pid}")
             sleep(WAIT_TIME_BEFORE_CHECK)
             if alive?
-              %x(kill -9 #{memoized_pid})
+              system("kill -9 #{memoized_pid}")
               sleep(WAIT_TIME_BEFORE_CHECK)
             end
           end
@@ -171,7 +171,7 @@ module Ziltoid
 
       if alive && self.restart_command
         update_state("restarted")
-        return %x(#{self.restart_command})
+        return system("#{self.restart_command}")
       end
 
       stop! if alive
