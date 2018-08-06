@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'ziltoid'
-  s.version     = '1.0.1'
+  s.version     = '1.0.2'
   s.date        = '2018-08-06'
   s.summary     = "Ziltoid, crontab based monitoring system"
   s.description = <<EOF
@@ -17,7 +17,7 @@ EOF
 
   s.authors     = ["Stéphane Akkaoui", "Vincent Gabou"]
   s.email       = ['sakkaoui@gmail.com', "vincent.gabou@gmail.com>"]
-  s.files       = ["lib/ziltoid.rb"]
+  s.files       =  Dir.glob(File.join("lib", "**", "*.rb"))
   s.homepage    = 'https://github.com/meuble/ziltoid'
   s.license     = 'WTFPL'
   s.metadata = {
@@ -25,4 +25,5 @@ EOF
     "homepage_uri"      => "https://github.com/meuble/ziltoid",
     "source_code_uri"   => "https://github.com/meuble/ziltoid"
   }
+  s.add_runtime_dependency 'pony', "~> 1.11"
 end
